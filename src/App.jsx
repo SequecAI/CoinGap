@@ -8,7 +8,10 @@ import {
   Activity,
   Coins,
   Bell,
-  AlertTriangle
+  AlertTriangle,
+  Info,
+  ChevronRight,
+  ShieldCheck
 } from 'lucide-react';
 
 const TARGET_ALTS = ['KRW-ETH', 'KRW-XRP', 'KRW-SOL', 'KRW-DOGE', 'KRW-TRX'];
@@ -28,7 +31,6 @@ const safeFetch = async (url) => {
   throw new Error('API 연결 실패');
 };
 
-// 광고 컴포넌트 (사용자 ID ca-pub-7947485317948024 적용)
 const TopAdBanner = () => {
   useEffect(() => {
     try {
@@ -56,6 +58,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [alertThreshold, setAlertThreshold] = useState(2.0);
+  const [showInfo, setShowInfo] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -94,7 +97,14 @@ export default function App() {
     return () => { isMounted = false; if (timeoutId) clearTimeout(timeoutId); };
   }, [markets]);
 
-  if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans"><RefreshCcw className="animate-spin text-slate-400" size={32} /></div>;
+  if (loading) return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
+      <div className="flex flex-col items-center gap-4 text-slate-500">
+        <RefreshCcw className="animate-spin" size={32} />
+        <p>암호화폐 시장 데이터 로딩 중...</p>
+      </div>
+    </div>
+  );
 
   const btc = tickers['KRW-BTC'];
   const alt = tickers[selectedAlt];
@@ -104,88 +114,136 @@ export default function App() {
   const altName = markets.find(m => m.market === selectedAlt)?.korean_name || selectedAlt;
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pt-28 pb-12">
-      {/* 상단 고정 광고 영역 */}
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pt-28 pb-20">
       <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm flex items-center justify-center h-[90px]">
         <TopAdBanner />
       </div>
 
       <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-8">
-        {/* 헤더 및 설정 */}
+
         <div className="flex flex-col md:flex-row md:items-center justify-between bg-white p-6 rounded-2xl shadow-sm border border-slate-100 gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-100 text-blue-600 rounded-xl"><Activity size={28} /></div>
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-600 text-white rounded-2xl">
+              <Activity size={28} />
+            </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">비트코인 갭 모니터</h1>
-              <p className="text-xs text-slate-400 tracking-wider">최근 업데이트: {lastUpdated.toLocaleTimeString()}</p>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">코인 갭 모니터</h1>
+              <div className="flex items-center gap-2 text-slate-400">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <p className="text-[10px] font-bold uppercase">{lastUpdated.toLocaleTimeString()} 업데이트</p>
+              </div>
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-slate-400 px-1">알림 기준 (%)</label>
-              <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2 w-full sm:w-24 font-bold outline-none" value={alertThreshold} onChange={(e) => setAlertThreshold(Number(e.target.value))} />
+              <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter text-left">Gap (%)</label>
+              <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none" value={alertThreshold} onChange={(e) => setAlertThreshold(Number(e.target.value))} />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-slate-400 px-1">코인 선택</label>
-              <select className="bg-slate-50 border border-slate-200 rounded-xl p-2 w-full sm:w-40 font-bold outline-none" value={selectedAlt} onChange={(e) => setSelectedAlt(e.target.value)}>
+              <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter text-left">Compare</label>
+              <select className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-40 font-bold outline-none" value={selectedAlt} onChange={(e) => setSelectedAlt(e.target.value)}>
                 {markets.map((m) => (<option key={m.market} value={m.market}>{m.korean_name}</option>))}
               </select>
             </div>
           </div>
         </div>
 
-        {/* 메인 갭 분석 */}
-        <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
-          <div className="relative z-10">
-            <h3 className="text-slate-400 font-medium mb-1 uppercase tracking-tighter">BTC vs {altName} Gap</h3>
-            <div className="flex items-baseline gap-2 mb-4">
-              <span className="text-6xl font-black">{Math.abs(rateGap).toFixed(2)}%p</span>
-            </div>
-            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md">
-              <p className="text-sm">현재 {altName}의 변동률이 비트코인 대비 <span className={rateGap > 0 ? 'text-blue-400' : 'text-red-400'}>{Math.abs(rateGap).toFixed(2)}%p {rateGap > 0 ? '낮습니다' : '높습니다'}</span>.</p>
+        <div className="grid grid-cols-1 gap-6">
+          <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden">
+            <div className="relative z-10 text-left">
+              <h3 className="text-slate-400 font-bold mb-1 text-lg">BTC vs {altName} Gap Analysis</h3>
+              <div className="flex items-baseline gap-3 mb-6">
+                <span className="text-7xl font-black tracking-tighter">{Math.abs(rateGap).toFixed(2)}%</span>
+                <span className={`text-xl font-bold ${rateGap > 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                  {rateGap > 0 ? 'BTC Strong' : 'Alt Strong'}
+                </span>
+              </div>
+              <div className="p-5 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-xl">
+                <p className="text-base font-medium leading-relaxed">
+                  현재 {altName}의 변동률이 비트코인 대비 <span className={`font-black ${rateGap > 0 ? 'text-blue-400' : 'text-red-400'}`}>{Math.abs(rateGap).toFixed(2)}%p {rateGap > 0 ? '낮게' : '높게'}</span> 형성되어 있습니다.
+                </p>
+              </div>
             </div>
           </div>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl"></div>
         </div>
 
-        {/* 가격 정보 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-            <p className="text-xs font-bold text-slate-400 mb-1">비트코인 (BTC)</p>
-            <p className="text-2xl font-bold">{btc?.trade_price.toLocaleString()} KRW</p>
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-left">
+            <p className="text-xs font-black text-slate-400 mb-1">BITCOIN (BTC)</p>
+            <p className="text-3xl font-black mb-1 tracking-tight">{btc?.trade_price.toLocaleString()} KRW</p>
             <p className={`text-sm font-bold ${btc?.change === 'RISE' ? 'text-red-500' : 'text-blue-500'}`}>{(btc?.signed_change_rate * 100).toFixed(2)}%</p>
           </div>
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-            <p className="text-xs font-bold text-slate-400 mb-1">{altName} ({selectedAlt.replace('KRW-', '')})</p>
-            <p className="text-2xl font-bold">{alt?.trade_price.toLocaleString()} KRW</p>
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-left">
+            <p className="text-xs font-black text-slate-400 mb-1">{altName.toUpperCase()}</p>
+            <p className="text-3xl font-black mb-1 tracking-tight">{alt?.trade_price.toLocaleString()} KRW</p>
             <p className={`text-sm font-bold ${alt?.change === 'RISE' ? 'text-red-500' : 'text-blue-500'}`}>{(alt?.signed_change_rate * 100).toFixed(2)}%</p>
           </div>
         </div>
 
         {Math.abs(rateGap) >= alertThreshold && (
-          <div className="bg-red-600 text-white p-5 rounded-2xl flex items-center gap-4 animate-pulse shadow-lg">
-            <Bell size={28} />
-            <span className="font-bold">🚨 갭 위험 수준: 현재 {Math.abs(rateGap).toFixed(2)}%p 차이가 발생했습니다!</span>
+          <div className="bg-red-600 text-white p-5 rounded-3xl flex items-center justify-between animate-pulse shadow-xl shadow-red-200 border-2 border-red-500">
+            <div className="flex items-center gap-4">
+              <Bell size={24} />
+              <p className="font-black text-lg">GAP ALERT! ({Math.abs(rateGap).toFixed(2)}%)</p>
+            </div>
+            <ChevronRight size={24} />
           </div>
         )}
 
-        {/* 하단 푸터 영역 (애드센스 승인 필수 문구) */}
-        <footer className="mt-12 pt-8 border-t border-slate-200 text-center space-y-4">
-          <div className="flex justify-center gap-6 text-xs font-medium text-slate-500">
-            <button onClick={() => window.open('https://www.google.com/policies/technologies/ads', '_blank')} className="hover:text-blue-600">
-              쿠키 정책
-            </button>
-            <button onClick={() => window.open('https://policies.google.com/privacy', '_blank')} className="hover:text-blue-600">
-              개인정보 처리방침
-            </button>
-            <span>연락처: support@sequecai.com</span>
-          </div>
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mt-12 text-left">
+          <button
+            onClick={() => setShowInfo(!showInfo)}
+            className="w-full p-6 flex items-center justify-between bg-slate-50/50 hover:bg-slate-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Info className="text-blue-500" size={20} />
+              <h2 className="text-lg font-bold text-slate-800">어떻게 활용하나요?</h2>
+            </div>
+            <div className={`transform transition-transform ${showInfo ? 'rotate-90' : ''}`}>
+              <ChevronRight size={20} />
+            </div>
+          </button>
 
-          <div className="text-[10px] text-slate-400 leading-relaxed max-w-2xl mx-auto italic">
-            <p>본 서비스는 정보 제공만을 목적으로 하며, 특정 자산의 매수/매도를 권유하지 않습니다.</p>
-            <p>데이터의 정확성을 보장하지 않으며, 투자에 대한 모든 책임은 사용자 본인에게 있습니다.</p>
-            <p>© 2024 Coin Gap Monitor. All rights reserved.</p>
+          {showInfo && (
+            <div className="p-8 space-y-6 border-t border-slate-100">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-black">1</div>
+                  <h4 className="font-bold">비트코인 기준</h4>
+                  <p className="text-sm text-slate-500">비트코인의 24시간 변동률을 시장의 기준으로 잡습니다.</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-black">2</div>
+                  <h4 className="font-bold">상대적 갭 측정</h4>
+                  <p className="text-sm text-slate-500">알트코인이 비트코인 대비 덜 올랐는지 더 올랐는지 수치화합니다.</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-black">3</div>
+                  <h4 className="font-bold">트레이딩 전략</h4>
+                  <p className="text-sm text-slate-500">비트코인과 알트코인 사이의 갭을 사용해서 과매수/과매도 포착에 활용할 수 있습니다.</p>
+                </div>
+              </div>
+              <div className="bg-blue-50 p-4 rounded-2xl flex gap-3 items-start">
+                <ShieldCheck className="text-blue-600 shrink-0" size={20} />
+                <p className="text-xs text-blue-800">업비트 Public API만을 사용하며, 어떠한 개인 정보나 키를 요구하지 않는 안전한 모니터링 환경입니다.</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <footer className="mt-12 pt-10 border-t border-slate-200 text-center space-y-6">
+          <div className="flex justify-center gap-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <button onClick={() => window.open('https://www.google.com/policies/technologies/ads', '_blank')} className="hover:text-blue-600">Cookies</button>
+            <button onClick={() => window.open('https://policies.google.com/privacy', '_blank')} className="hover:text-blue-600">Privacy</button>
+            <span>Contact: adminsequenceai@gmail.com</span>
+          </div>
+          <div className="text-[10px] text-slate-300 leading-relaxed max-w-lg mx-auto">
+            <p>본 서비스는 정보 제공을 위한 모니터링 도구입니다. 모든 투자 책임은 본인에게 있습니다.</p>
+            <p className="mt-2 font-black text-slate-400 tracking-tighter">© 2024 COIN GAP MONITOR. BY SEQUEC AI.</p>
           </div>
         </footer>
       </div>

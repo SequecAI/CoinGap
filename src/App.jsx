@@ -232,7 +232,7 @@ export default function App() {
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
             <button onClick={() => window.open('https://www.google.com/policies/technologies/ads', '_blank')} className="hover:text-blue-600 transition-colors">Cookies</button>
             <button onClick={() => window.open('https://policies.google.com/privacy', '_blank')} className="hover:text-blue-600 transition-colors">Privacy Policy</button>
-            <span>Contact: adminsequenceai@gmail.com</span>
+            <span>Contact: info@sequenceai.co.kr</span>
           </div>
           <div className="text-[10px] text-slate-300 leading-relaxed max-w-lg mx-auto">
             <p>Coin Gap Monitor is a real-time data visualization tool. Investing in cryptocurrency carries risk.</p>

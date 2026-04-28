@@ -209,7 +209,7 @@ export default function App() {
                 <div className="space-y-2">
                   <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-black">3</div>
                   <h4 className="font-bold">트레이딩 전략</h4>
-                  <p className="text-sm text-slate-500 font-medium leading-relaxed">갭이 커지면 과매수, 작아지면 과매도 구간으로, 갭상승/갭하락 투자에 활용할 수 있습니다.</p>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">갭이 + 방향으로 커지면 <strong className="text-red-600 font-bold underline decoration-red-200 underline-offset-2">과매수</strong>, - 방향으로 커지면 <strong className="text-blue-600 font-bold underline decoration-blue-200 underline-offset-2">과매도</strong> 구간으로, 갭상승/갭하락 투자에 활용할 수 있습니다.</p>
                 </div>
               </div>
 

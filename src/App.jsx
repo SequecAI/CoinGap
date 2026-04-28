@@ -11,7 +11,7 @@ import {
   ShieldCheck,
   BookOpen
 } from 'lucide-react';
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from '@vercel/analytics/react';
 
 const TARGET_ALTS = ['KRW-ETH', 'KRW-XRP', 'KRW-SOL', 'KRW-DOGE', 'KRW-TRX'];
 
@@ -257,6 +257,7 @@ export default function App() {
           </div>
         </footer>
       </div>
+      <Analytics />
     </div>
   );
 }

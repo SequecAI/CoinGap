@@ -115,7 +115,7 @@ export default function App() {
 
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter">Gap (%)</label>
+              <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter">Gap Alarm(%)</label>
               <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums" value={alertThreshold} onChange={(e) => setAlertThreshold(Number(e.target.value))} />
             </div>
             <div className="flex flex-col gap-1">

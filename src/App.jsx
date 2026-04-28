@@ -41,9 +41,10 @@ const TopAdBanner = () => {
   }, []);
 
   return (
-    <div className="w-full max-w-4xl h-[90px] flex items-center justify-center overflow-hidden">
+    /* 모바일 높이를 50px로 슬림하게 조정 */
+    <div className="w-full max-w-4xl h-[50px] md:h-[90px] flex items-center justify-center overflow-hidden">
       <ins className="adsbygoogle"
-        style={{ display: 'block', width: '100%', height: '90px' }}
+        style={{ display: 'block', width: '100%', height: '100%' }}
         data-ad-client="ca-pub-7947485317948024"
         data-ad-format="horizontal"
         data-full-width-responsive="true"></ins>
@@ -114,8 +115,9 @@ export default function App() {
   const altName = markets.find(m => m.market === selectedAlt)?.korean_name || selectedAlt;
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pt-28 pb-20">
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm flex items-center justify-center h-[90px]">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pt-16 md:pt-28 pb-20">
+      {/* 상단 헤더 높이도 50px로 맞춰서 슬림하게 변경 */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm flex items-center justify-center h-[50px] md:h-[90px]">
         <TopAdBanner />
       </div>
 
@@ -127,7 +129,7 @@ export default function App() {
               <Activity size={28} />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">코인 갭 모니터</h1>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight text-left">코인 갭 모니터</h1>
               <div className="flex items-center gap-2 text-slate-400">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -157,7 +159,7 @@ export default function App() {
             <div className="relative z-10 text-left">
               <h3 className="text-slate-400 font-bold mb-1 text-lg">BTC vs {altName} Gap Analysis</h3>
               <div className="flex items-baseline gap-3 mb-6">
-                <span className="text-7xl font-black tracking-tighter">{Math.abs(rateGap).toFixed(2)}%</span>
+                <span className="text-5xl md:text-7xl font-black tracking-tighter">{Math.abs(rateGap).toFixed(2)}%</span>
                 <span className={`text-xl font-bold ${rateGap > 0 ? 'text-blue-400' : 'text-red-400'}`}>
                   {rateGap > 0 ? 'BTC Strong' : 'Alt Strong'}
                 </span>
@@ -173,14 +175,20 @@ export default function App() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-left">
-            <p className="text-xs font-black text-slate-400 mb-1">BITCOIN (BTC)</p>
+            <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-widest">Bitcoin (BTC)</p>
             <p className="text-3xl font-black mb-1 tracking-tight">{btc?.trade_price.toLocaleString()} KRW</p>
-            <p className={`text-sm font-bold ${btc?.change === 'RISE' ? 'text-red-500' : 'text-blue-500'}`}>{(btc?.signed_change_rate * 100).toFixed(2)}%</p>
+            <div className={`flex items-center gap-1 font-bold ${btc?.change === 'RISE' ? 'text-red-500' : 'text-blue-500'}`}>
+              {btc?.change === 'RISE' ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+              <span>{(btc?.signed_change_rate * 100).toFixed(2)}%</span>
+            </div>
           </div>
           <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-left">
-            <p className="text-xs font-black text-slate-400 mb-1">{altName.toUpperCase()}</p>
+            <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-widest">{altName}</p>
             <p className="text-3xl font-black mb-1 tracking-tight">{alt?.trade_price.toLocaleString()} KRW</p>
-            <p className={`text-sm font-bold ${alt?.change === 'RISE' ? 'text-red-500' : 'text-blue-500'}`}>{(alt?.signed_change_rate * 100).toFixed(2)}%</p>
+            <div className={`flex items-center gap-1 font-bold ${alt?.change === 'RISE' ? 'text-red-500' : 'text-blue-500'}`}>
+              {alt?.change === 'RISE' ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+              <span>{(alt?.signed_change_rate * 100).toFixed(2)}%</span>
+            </div>
           </div>
         </div>
 
@@ -237,13 +245,13 @@ export default function App() {
 
         <footer className="mt-12 pt-10 border-t border-slate-200 text-center space-y-6">
           <div className="flex justify-center gap-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            <button onClick={() => window.open('https://www.google.com/policies/technologies/ads', '_blank')} className="hover:text-blue-600">Cookies</button>
-            <button onClick={() => window.open('https://policies.google.com/privacy', '_blank')} className="hover:text-blue-600">Privacy</button>
+            <button onClick={() => window.open('https://www.google.com/policies/technologies/ads', '_blank')} className="hover:text-blue-600 transition-colors">Cookies</button>
+            <button onClick={() => window.open('https://policies.google.com/privacy', '_blank')} className="hover:text-blue-600 transition-colors">Privacy</button>
             <span>Contact: adminsequenceai@gmail.com</span>
           </div>
-          <div className="text-[10px] text-slate-300 leading-relaxed max-w-lg mx-auto">
+          <div className="text-[10px] text-slate-300 leading-relaxed max-w-lg mx-auto px-4">
             <p>본 서비스는 정보 제공을 위한 모니터링 도구입니다. 모든 투자 책임은 본인에게 있습니다.</p>
-            <p className="mt-2 font-black text-slate-400 tracking-tighter">© 2024 COIN GAP MONITOR. BY SEQUEC AI.</p>
+            <p className="mt-2 font-black text-slate-400 tracking-tighter uppercase">© 2024 COIN GAP MONITOR. BY SEQUEC AI.</p>
           </div>
         </footer>
       </div>

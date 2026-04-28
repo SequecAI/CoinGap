@@ -219,12 +219,12 @@ export default function App() {
                 <div className="space-y-2">
                   <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-black">2</div>
                   <h4 className="font-bold">상대적 갭 측정</h4>
-                  <p className="text-sm text-slate-500">알트코인이 비트코인 대비 덜 올랐는지 더 올랐는지 수치화합니다.</p>
+                  <p className="text-sm text-slate-500">알트코인이 비트코인 대비 덜 상승/하락한 갭을 수치화합니다.</p>
                 </div>
                 <div className="space-y-2">
                   <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-black">3</div>
                   <h4 className="font-bold">트레이딩 전략</h4>
-                  <p className="text-sm text-slate-500">비트코인과 알트코인 사이의 갭을 사용해서 과매수/과매도 포착에 활용할 수 있습니다.</p>
+                  <p className="text-sm text-slate-500">갭이 커지면 과매수, 작아지면 과매도 구간으로, 차액 매매에 활용할 수 있습니다.</p>
                 </div>
               </div>
               <div className="bg-blue-50 p-4 rounded-2xl flex gap-3 items-start">

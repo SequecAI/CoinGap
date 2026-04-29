@@ -32,7 +32,7 @@ function DashboardSignalPanel({ momentum5m, zScoreValue }) {
       <div className="relative z-10 text-left font-sans flex-1">
         <div className="flex items-center gap-2 mb-1">
           <Crosshair size={16} className="text-violet-500" />
-          <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Dashboard Signal</h3>
+          <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Divergence Score</h3>
         </div>
         <p className="text-xs text-slate-500 font-medium mb-3">
           Price Momentum과 Gap Z-Score를 50:50으로 결합한 <span className="text-violet-600 font-bold">단기 트레이딩 신호</span>입니다.

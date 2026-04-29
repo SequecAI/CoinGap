@@ -206,7 +206,7 @@ export default function App() {
             </div>
           </button>
 
-          {showInfo && (
+          {showInfo && activeTab === 'dashboard' && (
             <div className="p-8 space-y-8 border-t border-slate-100 text-left font-sans">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
                 <div className="space-y-2">
@@ -268,6 +268,60 @@ export default function App() {
               <div className="bg-blue-50 p-4 rounded-2xl flex gap-3 items-start border border-blue-100 text-left">
                 <ShieldCheck className="text-blue-600 shrink-0" size={20} />
                 <p className="text-[11px] text-blue-800 font-medium leading-tight">업비트 및 글로벌 금융 API를 사용하여 실시간으로 데이터를 분석하는 투명한 모니터링 환경입니다.</p>
+              </div>
+            </div>
+          )}
+
+          {showInfo && activeTab === 'analysis' && (
+            <div className="p-8 space-y-8 border-t border-slate-100 text-left font-sans">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                <div className="space-y-2">
+                  <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center font-black">1</div>
+                  <h4 className="font-bold">통계 지표 활용</h4>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">단일 지표에 의존하지 않고 여러 보조지표의 교차 검증을 통해 신뢰도를 높입니다.</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center font-black">2</div>
+                  <h4 className="font-bold">시그널 점수</h4>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">RSI, 볼린저 밴드 등 4가지 지표를 하나의 점수로 압축하여 직관적인 매매 기준을 제공합니다.</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center font-black">3</div>
+                  <h4 className="font-bold">단기 흐름 포착</h4>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">5분봉 단위의 체결 강도와 모멘텀을 통해 시장의 즉각적인 수급 변화를 읽어냅니다.</p>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-slate-50 space-y-4 font-sans text-left">
+                <div className="flex items-center gap-2 text-slate-800 font-bold mb-2">
+                  <BookOpen size={18} className="text-purple-500" />
+                  <span>통계 지표 분석 가이드 (Tip)</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
+                    <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter">Bollinger Bands & RSI</p>
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                      볼린저 밴드 하단을 이탈(%B &lt; 0)하면서 RSI가 30 이하의 <strong className="text-blue-600 font-bold underline decoration-blue-200 underline-offset-2">과매도</strong> 상태일 때는 반등을 노린 매수 관점으로 접근하기 좋습니다.
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
+                    <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter">Trade Intensity</p>
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                      체결 강도가 <strong className="text-red-600 font-bold">매수(Buy) 우위</strong>일 경우 실질적인 자금 유입이 일어나고 있음을 의미하므로, 가격 상승 추세의 신뢰도를 높여줍니다.
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left md:col-span-2">
+                    <p className="text-xs font-black text-violet-400 mb-1 uppercase tracking-tighter">Signal Score (종합 시그널)</p>
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                      0부터 100까지의 수치로 나타나는 종합 시그널 점수는 <strong className="text-emerald-600 font-bold">높을수록 강한 매수 신호(저평가/반등 예상)</strong>를, <strong className="text-red-600 font-bold">낮을수록 강한 매도 신호(과열/하락 예상)</strong>를 의미합니다. 다중 지표의 교집합이 발생할 때 점수가 극단으로 치우치며, 이는 확률 높은 트레이딩 시점을 시사합니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-purple-50 p-4 rounded-2xl flex gap-3 items-start border border-purple-100 text-left">
+                <ShieldCheck className="text-purple-600 shrink-0" size={20} />
+                <p className="text-[11px] text-purple-800 font-medium leading-tight">통계적 분석은 과거의 패턴을 바탕으로 확률을 계산할 뿐, 미래의 확실한 수익을 보장하지 않습니다. 리스크 관리를 병행하세요.</p>
               </div>
             </div>
           )}

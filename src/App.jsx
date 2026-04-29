@@ -1,3 +1,23 @@
+import React, { useState, useEffect } from 'react';
+import {
+  TrendingUp,
+  TrendingDown,
+  RefreshCcw,
+  Activity,
+  Coins,
+  Bell,
+  Info,
+  ChevronRight,
+  ShieldCheck,
+  BookOpen,
+  BarChart3,
+  Zap,
+  Gauge,
+  PieChart,
+  MoveUpRight
+} from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
+
 const TARGET_ALTS = ['KRW-ETH', 'KRW-XRP', 'KRW-SOL', 'KRW-DOGE', 'KRW-TRX'];
 
 const safeFetch = async (url) => {

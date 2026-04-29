@@ -396,13 +396,13 @@ export default function App() {
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left font-sans">
                     <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter text-left">Gap Recovery</p>
                     <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                      갭이 평소보다 과하게 벌어진 이후에는 원상태로 돌아가려는 경향이 있습니다. 이 성질을 잘 활용해보세요.
+                      갭이 평소보다 과하게 벌어진 이후에는 <strong className="text-orange-600 font-bold">원상태로 돌아가려는 경향</strong>이 있습니다. 이 성질을 잘 활용해보세요.
                     </p>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left font-sans">
                     <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter text-left">Statistical Edge</p>
                     <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                      Z-Score가 <strong className="text-orange-600 font-bold">3.0</strong>을 넘어서면 비트코인이 알트 대비 통계적 한계치까지 과하게 상승한 <strong className="text-red-600 font-bold">가격 왜곡</strong> 상태를 의미하며, 이후 갭이 좁혀지며 알트코인이 <strong className="text-blue-600 font-bold">키맞추기 상승</strong>을 할 가능성이 높습니다.
+                      Z-Score가 <strong className="text-orange-600 font-bold">3.0</strong>을 넘어서면 비트코인이 알트 대비 통계적 한계치까지 과하게 상승한 가격 왜곡 상태를 의미하며, 이후 갭이 좁혀지며 알트코인이 키맞추기 <strong className="text-red-600 font-bold">상승</strong>을 할 가능성이 높습니다. 반대로 <strong className="text-blue-600 font-bold">-3.0</strong>을 초과한다면 알트코인이 키맞추기 <strong className="text-blue-600 font-bold">하락</strong>을 할 가능성이 높습니다.
                     </p>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left font-sans">

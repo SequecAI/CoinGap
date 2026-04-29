@@ -166,7 +166,7 @@ export default function App() {
 
         {/* 상단 헤더 */}
         <div className="flex flex-col md:flex-row md:items-center justify-between bg-white p-6 rounded-2xl shadow-sm border border-slate-100 gap-4">
-          <div className="flex items-center gap-4 text-left">
+          <div className="flex items-center gap-4 text-left font-sans">
             <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-100">
               <Activity size={28} />
             </div>
@@ -200,7 +200,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* 대시보드 그리드 (6개 지표) */}
+        {/* 대시보드 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
             <div className="relative z-10 text-left font-sans">
@@ -262,11 +262,11 @@ export default function App() {
 
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10 text-left font-sans">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 font-sans">
                 <Zap size={16} className="text-amber-500" />
                 <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Relative Strength</h3>
               </div>
-              <div className="flex items-baseline gap-3 mb-4 text-left">
+              <div className="flex items-baseline gap-3 mb-4 text-left font-sans">
                 <span className={`text-4xl font-black tracking-tighter uppercase ${rsiStrength === 'Stronger' ? 'text-amber-600' : 'text-slate-400'}`}>
                   {rsiStrength}
                 </span>
@@ -280,9 +280,9 @@ export default function App() {
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group font-sans">
             <div className="relative z-10 text-left font-sans">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 font-sans">
                 <PieChart size={16} className="text-orange-500" />
                 <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">BTC Dominance</h3>
               </div>
@@ -292,7 +292,7 @@ export default function App() {
                   MARKET SHARE
                 </div>
               </div>
-              <p className="text-xs text-slate-500 font-medium leading-relaxed border-t border-slate-50 pt-4 font-sans">
+              <p className="text-xs text-slate-500 font-medium leading-relaxed border-t border-slate-50 pt-4 text-left font-sans">
                 전체 시장 중 <span className="text-orange-600 font-bold">BTC 비중</span>입니다. 점유율 하락 시 알트코인 반등 확률이 높아집니다.
               </p>
             </div>
@@ -310,7 +310,7 @@ export default function App() {
                   {disparity > 105 ? 'Overheated' : disparity < 95 ? 'Oversold' : 'Stable'}
                 </div>
               </div>
-              <p className="text-xs text-slate-500 font-medium leading-relaxed border-t border-slate-50 pt-4 font-sans">
+              <p className="text-xs text-slate-500 font-medium leading-relaxed border-t border-slate-50 pt-4 text-left font-sans">
                 20일 평균가 대비 <span className="text-emerald-600 font-bold">괴리율</span>입니다. 100%를 기준으로 현재 가격의 과열도를 판단합니다.
               </p>
             </div>
@@ -341,24 +341,30 @@ export default function App() {
           </div>
         </div>
 
-        {/* 알림 메시지 */}
+        {/* 알림 메시지 (두 줄 구성 및 텍스트 최적화) */}
         {(currentDropMagnitude >= dropThreshold || currentZScoreMagnitude >= zScoreThreshold) && (
           <div className="bg-red-600 text-white p-5 rounded-3xl flex items-center justify-between animate-pulse shadow-xl shadow-red-200 border-2 border-red-500 font-sans">
             <div className="flex items-center gap-4 text-left">
               <Bell size={24} className="shrink-0" />
-              <div className="text-left font-sans">
+              <div className="text-left font-sans space-y-1">
                 <p className="font-black text-lg uppercase leading-none tracking-tighter">Market Alert!</p>
-                <p className="text-xs font-bold opacity-90 mt-1">
-                  {currentDropMagnitude >= dropThreshold && `Momentum: ${momentum5m.toFixed(2)}% `}
-                  {currentZScoreMagnitude >= zScoreThreshold && `Z-Score: ${zScoreValue}`}
-                </p>
+                {currentDropMagnitude >= dropThreshold && (
+                  <p className="text-xs font-bold opacity-90">
+                    Momentum: <span className="tabular-nums">{momentum5m.toFixed(2)}%</span> (Threshold Exceeded)
+                  </p>
+                )}
+                {currentZScoreMagnitude >= zScoreThreshold && (
+                  <p className="text-xs font-bold opacity-90">
+                    Z-Score: <span className="tabular-nums">{zScoreValue}</span> (Price Distortion Detected)
+                  </p>
+                )}
               </div>
             </div>
             <ChevronRight size={24} />
           </div>
         )}
 
-        {/* 정보성 섹션 (완벽 복구) */}
+        {/* 정보성 섹션 (완벽 복구 + 새로운 팁 추가) */}
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mt-12 text-left font-sans">
           <button onClick={() => setShowInfo(!showInfo)} className="w-full p-6 flex items-center justify-between bg-slate-50/50 hover:bg-slate-50 transition-colors">
             <div className="flex items-center gap-3 font-sans">
@@ -418,6 +424,13 @@ export default function App() {
                     <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter">Dominance Context</p>
                     <p className="text-xs text-slate-600 leading-relaxed font-medium">
                       비트코인 도미넌스가 <span className="text-orange-600 font-bold">강하게 상승</span> 중일 때는 갭이 벌어져도 알트코인 반등이 약할 수 있으니 주의가 필요합니다.
+                    </p>
+                  </div>
+                  {/* 요청하신 복합 신호 가이드 추가 */}
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-red-100 text-left md:col-span-2">
+                    <p className="text-xs font-black text-red-400 mb-1 uppercase tracking-tighter">Dual Signal Alert (Extreme Signal)</p>
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                      Drop Alert(단기 모멘텀)와 Z-Score Alert(통계적 왜곡)가 <strong className="text-red-600 font-bold">동시에</strong> 작동한다면, 이는 시장의 탄력이 한계치에 도달했다는 강력한 증거입니다. 이 경우 해당 지점이 단기 <strong className="text-red-600 font-bold underline decoration-red-200 underline-offset-4">고점</strong> 또는 <strong className="text-blue-600 font-bold underline decoration-blue-200 underline-offset-2 font-sans">저점</strong>의 신호일 확률이 매우 높으므로 <strong>반전 매매(Mean Reversion)</strong> 전략을 고려해볼 수 있습니다.
                     </p>
                   </div>
                 </div>

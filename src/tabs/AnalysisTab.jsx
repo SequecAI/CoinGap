@@ -2,7 +2,7 @@ import React from 'react';
 import { Zap, Activity, Gauge, Shield, Crosshair, TrendingUp } from 'lucide-react';
 
 // ── SVG 바 차트 컴포넌트 ──
-function VolumeBarChart({ candles }) {
+export function VolumeBarChart({ candles }) {
   if (!candles || candles.length === 0) return <EmptyState text="데이터 로딩 중..." />;
 
   const volumes = candles.map(c => c.candle_acc_trade_volume);
@@ -54,7 +54,7 @@ function VolumeBarChart({ candles }) {
 }
 
 // ── 체결 강도 게이지 ──
-function TradeIntensityGauge({ candles }) {
+export function TradeIntensityGauge({ candles }) {
   if (!candles || candles.length === 0) return <EmptyState text="데이터 로딩 중..." />;
 
   // 5분봉 캔들에서 매수/매도 압력 추정: 양봉(종가>시가) = 매수 우위, 음봉 = 매도 우위
@@ -180,7 +180,7 @@ function RateComparisonChart({ btcRate, altRate, altName }) {
 }
 
 // ── 모멘텀 라인 차트 ──
-function MomentumLineChart({ candles }) {
+export function MomentumLineChart({ candles }) {
   if (!candles || candles.length < 2) return <EmptyState text="데이터 로딩 중..." />;
 
   // 각 봉의 시가 대비 변동률
@@ -222,7 +222,7 @@ function MomentumLineChart({ candles }) {
 
   return (
     <div className="flex flex-col gap-1 w-full">
-      <svg viewBox={`0 0 ${chartW} ${chartH + 16}`} className="w-full" preserveAspectRatio="xMidYMid meet">
+      <svg viewBox={`0 0 ${chartW} ${chartH + 6}`} className="w-full" preserveAspectRatio="xMidYMid meet">
         {/* 0% 기준선 */}
         {zeroY !== null && (
           <line x1={padX} y1={zeroY} x2={chartW - padX} y2={zeroY}
@@ -260,7 +260,7 @@ function MomentumLineChart({ candles }) {
           const time = c.candle_date_time_kst?.split('T')[1]?.substring(0, 5) || '';
           const anchor = idx === 0 ? 'start' : idx === candles.length - 1 ? 'end' : 'middle';
           return (
-            <text key={idx} x={points[idx].x} y={chartH + 3} textAnchor={anchor}
+            <text key={idx} x={points[idx].x} y={chartH + 4} textAnchor={anchor}
               fontSize="3" fill="#94a3b8" fontWeight="600">{time}</text>
           );
         })}
@@ -293,7 +293,7 @@ function calcRSI(candles) {
   return 100 - (100 / (1 + rs));
 }
 
-function RSIGauge({ rsi }) {
+export function RSIGauge({ rsi }) {
   if (rsi === null) return <EmptyState text="데이터 부족" />;
 
   const getZone = (v) => {
@@ -362,7 +362,7 @@ function calcBollinger(candles) {
   return { upper, lower, ma, current, percentB, bandwidth, std };
 }
 
-function BollingerBandPanel({ bb, altName }) {
+export function BollingerBandPanel({ bb, altName }) {
   if (!bb) return <EmptyState text="데이터 부족 (20일봉 필요)" />;
 
   const { upper, lower, ma, current, percentB, bandwidth } = bb;
@@ -443,7 +443,7 @@ function BollingerBandPanel({ bb, altName }) {
 }
 
 // ── 종합 시그널 스코어 ──
-function calcSignalScore(rsi, bb, momentum5m, candles) {
+export function calcSignalScore(rsi, bb, momentum5m, candles) {
   let score = 50; // 기본 중립
 
   // RSI 기여 (0-100 → 반전: 낮을수록 매수 기회)
@@ -478,7 +478,7 @@ function calcSignalScore(rsi, bb, momentum5m, candles) {
   return { score: Math.max(0, Math.min(100, score)) };
 }
 
-function SignalScorePanel({ score }) {
+export function SignalScorePanel({ score }) {
   const getLabel = (s) => {
     if (s >= 70) return { text: 'Strong Buy', color: '#10b981', bg: 'bg-emerald-500/10', tc: 'text-emerald-500', bc: 'border-emerald-500/30' };
     if (s >= 55) return { text: 'Buy', color: '#34d399', bg: 'bg-emerald-400/10', tc: 'text-emerald-400', bc: 'border-emerald-400/30' };
@@ -524,7 +524,7 @@ function SignalScorePanel({ score }) {
 
 
 // ── 빈 상태 ──
-function EmptyState({ text }) {
+export function EmptyState({ text }) {
   return (
     <div className="flex items-center justify-center h-32 text-slate-400 text-sm font-bold">
       {text}
@@ -542,9 +542,12 @@ export default function AnalysisTab({
   alt,
   momentum5m
 }) {
-  const rsi = calcRSI(dayCandles);
-  const bb = calcBollinger(dayCandles);
-  const signal = calcSignalScore(rsi, bb, momentum5m, candles5m);
+  const displayCandles5m = candles5m ? candles5m.slice(-12) : [];
+  const displayDayCandles = dayCandles ? dayCandles.slice(-20) : [];
+
+  const rsi = calcRSI(displayDayCandles);
+  const bb = calcBollinger(displayDayCandles);
+  const signal = calcSignalScore(rsi, bb, momentum5m, displayCandles5m);
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
 
@@ -589,8 +592,8 @@ export default function AnalysisTab({
           <p className="text-xs text-slate-500 font-medium mb-2">
             최근 1시간의 <span className="text-cyan-400 font-bold">5분봉 모멘텀</span> 추세입니다. 각 봉의 시가 대비 변동률을 추적합니다.
           </p>
-          <div className="h-36 mt-auto">
-            <MomentumLineChart candles={candles5m} />
+          <div className="mt-auto pt-2 w-full">
+            <MomentumLineChart candles={displayCandles5m} />
           </div>
         </div>
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-cyan-400/5 rounded-full blur-[60px]"></div>
@@ -607,7 +610,7 @@ export default function AnalysisTab({
             최근 12개 5분봉의 <span className="text-red-500 font-bold">매수</span> vs <span className="text-blue-500 font-bold">매도</span> 압력 추정입니다.
           </p>
           <div className="mt-auto">
-            <TradeIntensityGauge candles={candles5m} />
+            <TradeIntensityGauge candles={displayCandles5m} />
           </div>
         </div>
       </div>

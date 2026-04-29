@@ -12,6 +12,7 @@ import { Analytics } from '@vercel/analytics/react';
 import { useUpbitData } from './hooks/useUpbitData';
 import DashboardTab from './tabs/DashboardTab';
 import AnalysisTab from './tabs/AnalysisTab';
+import CustomViewTab from './tabs/CustomViewTab';
 
 export default function App() {
   const {
@@ -132,10 +133,10 @@ export default function App() {
             Statistics
           </button>
           <button
-            onClick={() => setActiveTab('multi')}
-            className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'multi' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+            onClick={() => setActiveTab('custom')}
+            className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'custom' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
           >
-            Multi-View
+            Custom View
           </button>
         </div>
 
@@ -179,10 +180,14 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'multi' && (
-          <div className="bg-white p-12 rounded-[2.5rem] border border-slate-100 shadow-sm text-center">
-            <p className="text-slate-500 font-bold">Multi-View 준비중...</p>
-          </div>
+        {activeTab === 'custom' && (
+          <CustomViewTab
+            candles5m={candles5m}
+            dayCandles={dayCandles}
+            altName={altName}
+            momentum5m={momentum5m}
+            zScoreValue={zScoreValue}
+          />
         )}
 
         {/* 알림 메시지 (두 줄 구성 및 명칭 통일) - 탭과 무관하게 상시 표시 */}
@@ -336,6 +341,28 @@ export default function App() {
               <div className="bg-purple-50 p-4 rounded-2xl flex gap-3 items-start border border-purple-100 text-left">
                 <ShieldCheck className="text-purple-600 shrink-0" size={20} />
                 <p className="text-[11px] text-purple-800 font-medium leading-tight">통계적 분석은 과거의 패턴을 바탕으로 확률을 계산할 뿐, 미래의 확실한 수익을 보장하지 않습니다. 리스크 관리를 병행하세요.</p>
+              </div>
+            </div>
+          )}
+
+          {showInfo && activeTab === 'custom' && (
+            <div className="p-8 space-y-8 border-t border-slate-100 text-left font-sans">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                <div className="space-y-2">
+                  <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center font-black">1</div>
+                  <h4 className="font-bold">내 마음대로 설정</h4>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">필요 없는 지표는 끄고, 원하는 지표만 켜서 나만의 대시보드를 구성합니다.</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center font-black">2</div>
+                  <h4 className="font-bold">커스텀 시그널 점수</h4>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">활성화된 지표들만을 1:1 비율로 평균내어 현재 내 전략에 맞는 매매 시그널을 산출합니다.</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center font-black">3</div>
+                  <h4 className="font-bold">설정 유지</h4>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">로컬 스토리지를 이용해 한 번 설정한 지표 구성은 앱을 껐다 켜도 그대로 유지됩니다.</p>
+                </div>
               </div>
             </div>
           )}

@@ -62,12 +62,13 @@ export function useUpbitData() {
     const fetchAnalyticsData = async () => {
       try {
         const [dayCandles, minCandles] = await Promise.all([
-          safeFetch(`https://api.upbit.com/v1/candles/days?market=${selectedAlt}&count=20`),
-          safeFetch(`https://api.upbit.com/v1/candles/minutes/5?market=${selectedAlt}&count=12`)
+          safeFetch(`https://api.upbit.com/v1/candles/days?market=${selectedAlt}&count=60`),
+          safeFetch(`https://api.upbit.com/v1/candles/minutes/5?market=${selectedAlt}&count=60`)
         ]);
         if (isMounted) {
           if (dayCandles && dayCandles.length > 0) {
-            const avg = dayCandles.reduce((acc, curr) => acc + curr.trade_price, 0) / dayCandles.length;
+            const recent20 = dayCandles.slice(0, 20);
+            const avg = recent20.reduce((acc, curr) => acc + curr.trade_price, 0) / recent20.length;
             setMa20(avg);
             setDayCandles([...dayCandles].reverse());
           }

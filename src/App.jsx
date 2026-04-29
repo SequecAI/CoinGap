@@ -41,10 +41,11 @@ export default function App() {
   const [tickers, setTickers] = useState({});
   const [dominance, setDominance] = useState(52.5);
   const [ma20, setMa20] = useState(0);
+  const [momentum5m, setMomentum5m] = useState(0);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [alertThreshold, setAlertThreshold] = useState(2.0);
-  const [zScoreThreshold, setZScoreThreshold] = useState(3.0); // Z-Score 3.0 기준
+  const [zScoreThreshold, setZScoreThreshold] = useState(3.0);
   const [showInfo, setShowInfo] = useState(true);
 
   // 1. 마켓 목록 및 거시 지표 가져오기
@@ -72,23 +73,39 @@ export default function App() {
     return () => { isMounted = false; };
   }, []);
 
-  // 2. 이격도 계산을 위한 과거 데이터 가져오기
+  // 2. 이격도 및 5분 모멘텀 계산을 위한 데이터 가져오기
   useEffect(() => {
     let isMounted = true;
-    const fetchCandles = async () => {
+    let timeoutId = null;
+
+    const fetchAnalyticsData = async () => {
       try {
-        const data = await safeFetch(`https://api.upbit.com/v1/candles/days?market=${selectedAlt}&count=20`);
-        if (isMounted && data && data.length > 0) {
-          const avg = data.reduce((acc, curr) => acc + curr.trade_price, 0) / data.length;
-          setMa20(avg);
+        const [dayCandles, minCandles] = await Promise.all([
+          safeFetch(`https://api.upbit.com/v1/candles/days?market=${selectedAlt}&count=20`),
+          safeFetch(`https://api.upbit.com/v1/candles/minutes/5?market=${selectedAlt}&count=1`)
+        ]);
+
+        if (isMounted) {
+          if (dayCandles && dayCandles.length > 0) {
+            const avg = dayCandles.reduce((acc, curr) => acc + curr.trade_price, 0) / dayCandles.length;
+            setMa20(avg);
+          }
+          if (minCandles && minCandles.length > 0) {
+            const candle5m = minCandles[0];
+            const currentPrice = tickers[selectedAlt]?.trade_price || candle5m.trade_price;
+            const rate = ((currentPrice / candle5m.opening_price) - 1) * 100;
+            setMomentum5m(rate);
+          }
         }
       } catch (error) { }
+      timeoutId = setTimeout(fetchAnalyticsData, 10000);
     };
-    fetchCandles();
-    return () => { isMounted = false; };
-  }, [selectedAlt]);
 
-  // 3. 실시간 시세 업데이트
+    fetchAnalyticsData();
+    return () => { isMounted = false; if (timeoutId) clearTimeout(timeoutId); };
+  }, [selectedAlt, tickers]);
+
+  // 3. 실시간 시세 업데이트 (Ticker)
   useEffect(() => {
     let isMounted = true;
     let timeoutId = null;
@@ -159,7 +176,7 @@ export default function App() {
 
         {/* 상단 헤더 */}
         <div className="flex flex-col md:flex-row md:items-center justify-between bg-white p-6 rounded-2xl shadow-sm border border-slate-100 gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 text-left">
             <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-100">
               <Activity size={28} />
             </div>
@@ -177,7 +194,8 @@ export default function App() {
 
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex flex-col gap-1 text-left">
-              <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">Gap Alert(%)</label>
+              {/* GAP ALERT를 DROP ALERT로 명칭 변경 */}
+              <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">DROP ALERT</label>
               <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums text-left" value={alertThreshold} onChange={(e) => setAlertThreshold(Number(e.target.value))} />
             </div>
             <div className="flex flex-col gap-1 text-left">
@@ -196,29 +214,29 @@ export default function App() {
         {/* 대시보드 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* 1. Price Momentum (Dark) */}
+          {/* 1. Price Momentum (5분 기준) */}
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
-                <Coins size={16} className="text-blue-400" />
+                <Zap size={16} className="text-yellow-400" />
                 <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Price Momentum</h3>
               </div>
               <div className="flex items-baseline gap-3 mb-4 text-left">
-                <span className="text-5xl font-black tracking-tighter tabular-nums">{Math.abs(altRate).toFixed(2)}%</span>
-                <div className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${altRate >= 0 ? 'bg-red-500/10 text-red-400 border-red-500/30' : 'bg-blue-500/10 text-blue-400 border-blue-500/30'}`}>
-                  {altRate >= 0 ? 'BULLISH' : 'BEARISH'}
+                <span className="text-5xl font-black tracking-tighter tabular-nums">{Math.abs(momentum5m).toFixed(2)}%</span>
+                <div className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${momentum5m >= 0 ? 'bg-red-500/10 text-red-400 border-red-500/30' : 'bg-blue-500/10 text-blue-400 border-blue-500/30'}`}>
+                  {momentum5m >= 0 ? '5M RISING' : '5M FALLING'}
                 </div>
               </div>
               <p className="text-xs text-slate-400 font-medium leading-relaxed border-t border-white/10 pt-4 text-left font-sans">
-                {altName}의 최근 24시간 <span className="text-blue-400 font-bold">가격 변동률</span>입니다. 시장의 절대적 에너지와 방향성을 파악하는 데 활용합니다.
+                {altName}의 <span className="text-blue-400 font-bold">최근 5분 가격 변동률</span>입니다. 시장의 즉각적인 에너지와 단기 방향성을 포착합니다.
               </p>
             </div>
-            <div className="absolute -top-12 -right-12 w-48 h-48 bg-blue-600/10 rounded-full blur-[60px]"></div>
+            <div className="absolute -top-12 -right-12 w-48 h-48 bg-yellow-400/5 rounded-full blur-[60px]"></div>
           </div>
 
-          {/* 2. Gap Z-Score (Dark) */}
+          {/* 2. Gap Z-Score (24시간 기준) */}
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
-            <div className="relative z-10">
+            <div className="relative z-10 text-left">
               <div className="flex items-center gap-2 mb-2 text-left">
                 <Gauge size={16} className="text-orange-400" />
                 <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Gap Z-Score</h3>
@@ -236,7 +254,7 @@ export default function App() {
             <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-orange-600/10 rounded-full blur-[60px]"></div>
           </div>
 
-          {/* 3. Volume Intensity (Light) */}
+          {/* 3. Volume Intensity */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10 text-left">
               <div className="flex items-center gap-2 mb-2">
@@ -255,7 +273,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* 4. Relative Strength (Light) */}
+          {/* 4. Relative Strength */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10 text-left">
               <div className="flex items-center gap-2 mb-2">
@@ -276,7 +294,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* 5. BTC Dominance (Light) */}
+          {/* 5. BTC Dominance */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10 text-left">
               <div className="flex items-center gap-2 mb-2">
@@ -295,7 +313,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* 6. MA20 Disparity (Light) */}
+          {/* 6. MA20 Disparity */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10 text-left">
               <div className="flex items-center gap-2 mb-2">

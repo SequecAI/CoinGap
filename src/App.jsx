@@ -11,10 +11,10 @@ import {
   ShieldCheck,
   BookOpen,
   BarChart3,
-  Globe,
   Zap,
-  Scale,
-  Gauge
+  Gauge,
+  PieChart,
+  MoveUpRight
 } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 
@@ -62,7 +62,7 @@ export default function App() {
             const krwMarkets = marketData.filter(m => TARGET_ALTS.includes(m.market));
             setMarkets(krwMarkets);
           }
-          if (domData && domData[0]) {
+          if (domData && domData[0] && domData[0].btc_d) {
             setDominance(parseFloat(domData[0].btc_d));
           }
         }
@@ -78,7 +78,7 @@ export default function App() {
     const fetchCandles = async () => {
       try {
         const data = await safeFetch(`https://api.upbit.com/v1/candles/days?market=${selectedAlt}&count=20`);
-        if (isMounted && data) {
+        if (isMounted && data && data.length > 0) {
           const avg = data.reduce((acc, curr) => acc + curr.trade_price, 0) / data.length;
           setMa20(avg);
         }
@@ -108,7 +108,7 @@ export default function App() {
       } catch (error) { }
       finally { if (isMounted) timeoutId = setTimeout(fetchAllTickers, 2000); }
     };
-    if (markets.length > 0) fetchAllTickers();
+    if (markets.length > 0 || !loading) fetchAllTickers();
     return () => { isMounted = false; if (timeoutId) clearTimeout(timeoutId); };
   }, [markets]);
 
@@ -176,7 +176,6 @@ export default function App() {
 
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex flex-col gap-1 text-left">
-              {/* Gap Alert 파란색으로 수정 */}
               <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">Gap Alert(%)</label>
               <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums text-left" value={alertThreshold} onChange={(e) => setAlertThreshold(Number(e.target.value))} />
             </div>
@@ -187,7 +186,7 @@ export default function App() {
             <div className="flex flex-col gap-1 text-left">
               <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter">Compare</label>
               <select className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-40 font-bold outline-none cursor-pointer focus:ring-2 focus:ring-blue-500 transition-all text-left" value={selectedAlt} onChange={(e) => setSelectedAlt(e.target.value)}>
-                {markets.map((m) => (<option key={m.market} value={m.market}>{m.korean_name}</option>))}
+                {markets.length > 0 ? markets.map((m) => (<option key={m.market} value={m.market}>{m.korean_name}</option>)) : <option value={selectedAlt}>{selectedAlt}</option>}
               </select>
             </div>
           </div>
@@ -196,7 +195,6 @@ export default function App() {
         {/* 대시보드 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* 1. 가격 격차 (Dark) - 변동률 차이 파란색 강조 유지 */}
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
@@ -216,7 +214,6 @@ export default function App() {
             <div className="absolute -top-12 -right-12 w-48 h-48 bg-blue-600/10 rounded-full blur-[60px]"></div>
           </div>
 
-          {/* 2. Gap Z-Score (Dark) */}
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
@@ -236,7 +233,6 @@ export default function App() {
             <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-orange-600/10 rounded-full blur-[60px]"></div>
           </div>
 
-          {/* 3. Volume Intensity (Light) */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
@@ -255,7 +251,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* 4. Relative Strength (Light) */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
@@ -276,7 +271,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* 5. BTC Dominance (Light) */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
@@ -295,7 +289,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* 6. MA20 Disparity (Light) */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export const TARGET_ALTS = ['KRW-ETH', 'KRW-XRP', 'KRW-SOL', 'KRW-DOGE', 'KRW-TRX'];
+export const TARGET_ALTS = ['KRW-BTC', 'KRW-ETH', 'KRW-XRP', 'KRW-TRX', 'KRW-SOL', 'KRW-DOGE'];
 
 export const safeFetch = async (url) => {
   const proxies = ['', 'https://api.codetabs.com/v1/proxy?quest=', 'https://corsproxy.io/?'];
@@ -40,7 +40,9 @@ export function useUpbitData() {
         ]);
         if (isMounted) {
           if (marketData) {
-            const krwMarkets = marketData.filter(m => TARGET_ALTS.includes(m.market));
+            const krwMarkets = marketData
+              .filter(m => TARGET_ALTS.includes(m.market))
+              .sort((a, b) => TARGET_ALTS.indexOf(a.market) - TARGET_ALTS.indexOf(b.market));
             setMarkets(krwMarkets);
           }
           if (domData && domData[0] && domData[0].btc_d) {
@@ -91,7 +93,7 @@ export function useUpbitData() {
     const fetchAllTickers = async () => {
       if (!isMounted) return;
       try {
-        const upbitQuery = ['KRW-BTC', ...TARGET_ALTS].join(',');
+        const upbitQuery = [...new Set(['KRW-BTC', ...TARGET_ALTS])].join(',');
         const upbitData = await safeFetch(`https://api.upbit.com/v1/ticker?markets=${upbitQuery}`);
         if (isMounted && upbitData) {
           const newTickers = {};

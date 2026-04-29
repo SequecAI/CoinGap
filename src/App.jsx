@@ -68,8 +68,12 @@ export default function App() {
   const rsiStrength = altRate > btcRate ? 'Stronger' : 'Weaker';
   const disparity = (alt && ma20 > 0) ? (alt.trade_price / ma20) * 100 : 100;
 
-  // 명칭 변환: KRW-XRP인 경우 '리플'로 반환
-  const getDisplayName = (m) => m.market === 'KRW-XRP' ? '리플' : m.korean_name;
+  // 명칭 변환: 긴 이름 축약 처리
+  const getDisplayName = (m) => {
+    if (m.market === 'KRW-XRP') return '리플';
+    if (m.market === 'KRW-DOGE') return '도지';
+    return m.korean_name;
+  };
   const currentMarket = markets.find(m => m.market === selectedAlt);
   const altName = currentMarket ? getDisplayName(currentMarket) : selectedAlt;
 
@@ -137,20 +141,30 @@ export default function App() {
 
         {/* 탭 내용 */}
         {activeTab === 'dashboard' && (
-          <DashboardTab
-            momentum5m={momentum5m}
-            zScoreValue={zScoreValue}
-            zLabel={zLabel}
-            volRatio={volRatio}
-            rsiStrength={rsiStrength}
-            dominance={dominance}
-            disparity={disparity}
-            altName={altName}
-            btc={btc}
-            alt={alt}
-            btcVol={btcVol}
-            altVol={altVol}
-          />
+          selectedAlt === 'KRW-BTC' ? (
+            <div className="bg-white p-16 rounded-[2.5rem] border border-slate-100 shadow-sm text-center flex flex-col items-center justify-center">
+              <Info size={48} className="text-blue-500 mb-4 opacity-80" />
+              <p className="text-slate-700 font-black text-xl mb-2 tracking-tight">Divergence 기능은 알트코인 전용입니다.</p>
+              <p className="text-slate-500 font-medium text-sm leading-relaxed max-w-sm mx-auto">
+                이 탭은 비트코인 대비 알트코인의 상대적 흐름(Gap)을 분석합니다. <br />상단 Compare 메뉴에서 <strong className="text-blue-500">알트코인</strong>을 선택해 주세요.
+              </p>
+            </div>
+          ) : (
+            <DashboardTab
+              momentum5m={momentum5m}
+              zScoreValue={zScoreValue}
+              zLabel={zLabel}
+              volRatio={volRatio}
+              rsiStrength={rsiStrength}
+              dominance={dominance}
+              disparity={disparity}
+              altName={altName}
+              btc={btc}
+              alt={alt}
+              btcVol={btcVol}
+              altVol={altVol}
+            />
+          )
         )}
         
         {activeTab === 'analysis' && (

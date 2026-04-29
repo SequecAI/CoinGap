@@ -44,7 +44,7 @@ export default function App() {
   const [momentum5m, setMomentum5m] = useState(0);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [alertThreshold, setAlertThreshold] = useState(2.0);
+  const [dropThreshold, setDropThreshold] = useState(2.0);
   const [zScoreThreshold, setZScoreThreshold] = useState(3.0);
   const [showInfo, setShowInfo] = useState(true);
 
@@ -73,7 +73,7 @@ export default function App() {
     return () => { isMounted = false; };
   }, []);
 
-  // 2. 이격도 및 5분 모멘텀 계산을 위한 데이터 가져오기
+  // 2. 이격도 및 5분 모멘텀 계산
   useEffect(() => {
     let isMounted = true;
     let timeoutId = null;
@@ -105,7 +105,7 @@ export default function App() {
     return () => { isMounted = false; if (timeoutId) clearTimeout(timeoutId); };
   }, [selectedAlt, tickers]);
 
-  // 3. 실시간 시세 업데이트 (Ticker)
+  // 3. 실시간 시세 업데이트
   useEffect(() => {
     let isMounted = true;
     let timeoutId = null;
@@ -143,15 +143,20 @@ export default function App() {
 
   const btcRate = btc ? btc.signed_change_rate * 100 : 0;
   const altRate = alt ? alt.signed_change_rate * 100 : 0;
+
+  // 갭 계산 (Z-Score용으로 유지)
   const rateGap = btcRate - altRate;
 
-  const currentGapMagnitude = Math.abs(rateGap);
-  const thresholdMagnitude = Math.abs(alertThreshold);
-
+  // Z-Score 계산
   const zScoreValue = (rateGap / 1.2).toFixed(1);
   const zNum = parseFloat(zScoreValue);
   const currentZScoreMagnitude = Math.abs(zNum);
   const zScoreThresholdMagnitude = Math.abs(zScoreThreshold);
+
+  // 알람 트리거 데이터: 이제 momentum5m(5분 변동률)을 기준으로 판단합니다.
+  const currentDropValue = momentum5m;
+  const currentDropMagnitude = Math.abs(momentum5m);
+  const thresholdMagnitude = Math.abs(dropThreshold);
 
   const getZLabel = (val) => {
     if (val >= 3.0) return { text: 'Alt Undervalued', color: 'text-red-500', bg: 'bg-red-500/10' };
@@ -176,12 +181,12 @@ export default function App() {
 
         {/* 상단 헤더 */}
         <div className="flex flex-col md:flex-row md:items-center justify-between bg-white p-6 rounded-2xl shadow-sm border border-slate-100 gap-4">
-          <div className="flex items-center gap-4 text-left">
+          <div className="flex items-center gap-4 text-left font-sans">
             <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-100">
               <Activity size={28} />
             </div>
-            <div className="text-left">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none">코인 갭 모니터</h1>
+            <div className="text-left font-sans">
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none font-sans">코인 갭 모니터</h1>
               <div className="flex items-center gap-2 text-slate-400 mt-1">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -193,18 +198,17 @@ export default function App() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex flex-col gap-1 text-left">
-              {/* GAP ALERT를 DROP ALERT로 명칭 변경 */}
+            <div className="flex flex-col gap-1 text-left font-sans">
               <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">DROP ALERT</label>
-              <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums text-left" value={alertThreshold} onChange={(e) => setAlertThreshold(Number(e.target.value))} />
+              <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums text-left font-sans" value={dropThreshold} onChange={(e) => setDropThreshold(Number(e.target.value))} />
             </div>
-            <div className="flex flex-col gap-1 text-left">
+            <div className="flex flex-col gap-1 text-left font-sans">
               <label className="text-[10px] font-black text-orange-400 px-1 uppercase tracking-tighter">Z-Score Alert</label>
-              <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-orange-500 transition-all tabular-nums text-left" value={zScoreThreshold} onChange={(e) => setZScoreThreshold(Number(e.target.value))} />
+              <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-orange-500 transition-all tabular-nums text-left font-sans" value={zScoreThreshold} onChange={(e) => setZScoreThreshold(Number(e.target.value))} />
             </div>
-            <div className="flex flex-col gap-1 text-left">
+            <div className="flex flex-col gap-1 text-left font-sans">
               <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter">Compare</label>
-              <select className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-40 font-bold outline-none cursor-pointer focus:ring-2 focus:ring-blue-500 transition-all text-left" value={selectedAlt} onChange={(e) => setSelectedAlt(e.target.value)}>
+              <select className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-40 font-bold outline-none cursor-pointer focus:ring-2 focus:ring-blue-500 transition-all text-left font-sans" value={selectedAlt} onChange={(e) => setSelectedAlt(e.target.value)}>
                 {markets.map((m) => (<option key={m.market} value={m.market}>{m.korean_name}</option>))}
               </select>
             </div>
@@ -214,12 +218,11 @@ export default function App() {
         {/* 대시보드 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* 1. Price Momentum (5분 기준) */}
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
-            <div className="relative z-10">
+            <div className="relative z-10 text-left font-sans">
               <div className="flex items-center gap-2 mb-2 text-left">
                 <Zap size={16} className="text-yellow-400" />
-                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Price Momentum</h3>
+                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Price Momentum</h3>
               </div>
               <div className="flex items-baseline gap-3 mb-4 text-left">
                 <span className="text-5xl font-black tracking-tighter tabular-nums">{Math.abs(momentum5m).toFixed(2)}%</span>
@@ -234,16 +237,15 @@ export default function App() {
             <div className="absolute -top-12 -right-12 w-48 h-48 bg-yellow-400/5 rounded-full blur-[60px]"></div>
           </div>
 
-          {/* 2. Gap Z-Score (24시간 기준) */}
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
-            <div className="relative z-10 text-left">
+            <div className="relative z-10 text-left font-sans">
               <div className="flex items-center gap-2 mb-2 text-left">
                 <Gauge size={16} className="text-orange-400" />
                 <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Gap Z-Score</h3>
               </div>
-              <div className="flex items-baseline gap-3 mb-4 text-left">
+              <div className="flex items-baseline gap-3 mb-4 text-left font-sans">
                 <span className="text-5xl font-black tracking-tighter tabular-nums">{zScoreValue}</span>
-                <div className={`px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-tighter ${zLabel.bg} ${zLabel.color} border-white/10`}>
+                <div className={`px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-tighter ${zLabel.bg} ${zLabel.color} border-white/10 font-sans`}>
                   {zLabel.text}
                 </div>
               </div>
@@ -254,9 +256,8 @@ export default function App() {
             <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-orange-600/10 rounded-full blur-[60px]"></div>
           </div>
 
-          {/* 3. Volume Intensity */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
-            <div className="relative z-10 text-left">
+            <div className="relative z-10 text-left font-sans">
               <div className="flex items-center gap-2 mb-2">
                 <BarChart3 size={16} className="text-purple-500" />
                 <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Volume Intensity</h3>
@@ -273,14 +274,13 @@ export default function App() {
             </div>
           </div>
 
-          {/* 4. Relative Strength */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
-            <div className="relative z-10 text-left">
-              <div className="flex items-center gap-2 mb-2">
+            <div className="relative z-10 text-left font-sans">
+              <div className="flex items-center gap-2 mb-2 font-sans">
                 <Zap size={16} className="text-amber-500" />
                 <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Relative Strength</h3>
               </div>
-              <div className="flex items-baseline gap-3 mb-4 text-left">
+              <div className="flex items-baseline gap-3 mb-4 text-left font-sans">
                 <span className={`text-4xl font-black tracking-tighter uppercase ${rsiStrength === 'Stronger' ? 'text-amber-600' : 'text-slate-400'}`}>
                   {rsiStrength}
                 </span>
@@ -294,14 +294,13 @@ export default function App() {
             </div>
           </div>
 
-          {/* 5. BTC Dominance */}
-          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
-            <div className="relative z-10 text-left">
-              <div className="flex items-center gap-2 mb-2">
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group font-sans">
+            <div className="relative z-10 text-left font-sans">
+              <div className="flex items-center gap-2 mb-2 font-sans">
                 <PieChart size={16} className="text-orange-500" />
                 <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">BTC Dominance</h3>
               </div>
-              <div className="flex items-baseline gap-3 mb-4 text-left">
+              <div className="flex items-baseline gap-3 mb-4 text-left font-sans">
                 <span className="text-5xl font-black tracking-tighter tabular-nums text-slate-900">{dominance.toFixed(1)}%</span>
                 <div className="px-2 py-0.5 rounded-full text-[10px] font-black border bg-orange-50 text-orange-600 border-orange-100 font-sans">
                   MARKET SHARE
@@ -313,14 +312,13 @@ export default function App() {
             </div>
           </div>
 
-          {/* 6. MA20 Disparity */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
-            <div className="relative z-10 text-left">
-              <div className="flex items-center gap-2 mb-2">
+            <div className="relative z-10 text-left font-sans">
+              <div className="flex items-center gap-2 mb-2 font-sans">
                 <MoveUpRight size={16} className="text-emerald-500" />
                 <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">MA20 Disparity</h3>
               </div>
-              <div className="flex items-baseline gap-3 mb-4 text-left">
+              <div className="flex items-baseline gap-3 mb-4 text-left font-sans">
                 <span className="text-5xl font-black tracking-tighter tabular-nums text-slate-900">{disparity.toFixed(1)}%</span>
                 <div className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${disparity > 105 ? 'bg-red-50 text-red-600 border-red-100' : disparity < 95 ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'} font-sans uppercase`}>
                   {disparity > 105 ? 'Overheated' : disparity < 95 ? 'Oversold' : 'Stable'}

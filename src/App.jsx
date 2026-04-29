@@ -45,9 +45,10 @@ export default function App() {
   const [zScoreThreshold, setZScoreThreshold] = useState(2.0);
   const [showInfo, setShowInfo] = useState(true);
 
+  // 1. 마켓 목록 가져오기
   useEffect(() => {
     let isMounted = true;
-    const fetchMarkets = async () => {
+    const initData = async () => {
       try {
         const data = await safeFetch('https://api.upbit.com/v1/market/all?isDetails=false');
         if (isMounted && data) {
@@ -56,29 +57,31 @@ export default function App() {
         }
       } catch (error) { }
     };
-    fetchMarkets();
+    initData();
     return () => { isMounted = false; };
   }, []);
 
+  // 2. 실시간 시세 업데이트
   useEffect(() => {
     let isMounted = true;
     let timeoutId = null;
-    const fetchTickers = async () => {
+    const fetchAllTickers = async () => {
       if (!isMounted) return;
       try {
-        const query = ['KRW-BTC', ...TARGET_ALTS].join(',');
-        const data = await safeFetch(`https://api.upbit.com/v1/ticker?markets=${query}`);
-        if (isMounted && data) {
+        const upbitQuery = ['KRW-BTC', ...TARGET_ALTS].join(',');
+        const upbitData = await safeFetch(`https://api.upbit.com/v1/ticker?markets=${upbitQuery}`);
+
+        if (isMounted && upbitData) {
           const newTickers = {};
-          data.forEach(t => { newTickers[t.market] = t; });
+          upbitData.forEach(t => { newTickers[t.market] = t; });
           setTickers(newTickers);
           setLastUpdated(new Date());
           setLoading(false);
         }
       } catch (error) { }
-      finally { if (isMounted) timeoutId = setTimeout(fetchTickers, 2000); }
+      finally { if (isMounted) timeoutId = setTimeout(fetchAllTickers, 2000); }
     };
-    if (markets.length > 0) fetchTickers();
+    if (markets.length > 0) fetchAllTickers();
     return () => { isMounted = false; if (timeoutId) clearTimeout(timeoutId); };
   }, [markets]);
 
@@ -94,25 +97,23 @@ export default function App() {
   const btc = tickers['KRW-BTC'];
   const alt = tickers[selectedAlt];
 
+  // [계산 로직]
   const btcRate = btc ? btc.signed_change_rate * 100 : 0;
   const altRate = alt ? alt.signed_change_rate * 100 : 0;
   const rateGap = btcRate - altRate;
-
-  // 알람 판정용 절대값 로직
   const currentGapMagnitude = Math.abs(rateGap);
   const thresholdMagnitude = Math.abs(alertThreshold);
+
+  const zScoreValue = (rateGap / 1.2).toFixed(1);
+  const currentZScoreMagnitude = Math.abs(parseFloat(zScoreValue));
+  const zScoreThresholdMagnitude = Math.abs(zScoreThreshold);
 
   const btcVol = btc ? btc.acc_trade_price_24h : 0;
   const altVol = alt ? alt.acc_trade_price_24h : 0;
   const volRatio = btcVol > 0 ? (altVol / btcVol) * 100 : 0;
 
-  const kimchiPremium = 1.25;
-  const zScoreValue = (rateGap / 1.5).toFixed(1);
-  const currentZScoreMagnitude = Math.abs(parseFloat(zScoreValue));
-  const zScoreThresholdMagnitude = Math.abs(zScoreThreshold); // Z-Score 알람 기준도 절대값 처리하여 버그 수정
-
-  const rsiDiv = altRate > btcRate ? 'Bullish' : 'Neutral';
-  const orderImbalance = 1.08;
+  // 상대 강도 판정
+  const rsiStrength = altRate > btcRate ? 'Stronger' : 'Weaker';
 
   const altName = markets.find(m => m.market === selectedAlt)?.korean_name || selectedAlt;
 
@@ -156,7 +157,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* 메인 대시보드 그리드 (2열 나열) */}
+        {/* 메인 대시보드 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           {/* 1. 가격 격차 (어두운 색) */}
@@ -179,7 +180,7 @@ export default function App() {
             <div className="absolute -top-12 -right-12 w-48 h-48 bg-blue-600/10 rounded-full blur-[60px]"></div>
           </div>
 
-          {/* 2. Z-Score (어두운 색 - 위치 이동) */}
+          {/* 2. Z-Score (어두운 색) */}
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
@@ -199,7 +200,7 @@ export default function App() {
             <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-orange-600/10 rounded-full blur-[60px]"></div>
           </div>
 
-          {/* 3. 거래량 강도 (하얀색 - 위치 이동) */}
+          {/* 3. 거래량 강도 (하얀색) */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
@@ -218,59 +219,23 @@ export default function App() {
             </div>
           </div>
 
-          {/* 4. 김치 프리미엄 (하얀색) */}
-          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-2 text-left">
-                <Globe size={16} className="text-emerald-500" />
-                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Kimchi Premium</h3>
-              </div>
-              <div className="flex items-baseline gap-3 mb-4 text-left">
-                <span className="text-5xl font-black tracking-tighter tabular-nums text-slate-900">{kimchiPremium}%</span>
-                <div className="px-2 py-0.5 rounded-full text-[10px] font-black border bg-emerald-50 text-emerald-600 border-emerald-100 font-sans">
-                  ESTIMATED
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 font-medium leading-relaxed border-t border-slate-50 pt-4 text-left font-sans">
-                해외 거래소 대비 국내 가격 격차입니다. <span className="text-emerald-600 font-bold">글로벌 추세</span>와의 괴리를 보여줍니다.
-              </p>
-            </div>
-          </div>
-
-          {/* 5. RSI 다이버전스 (하얀색) */}
+          {/* 4. 상대 강도 (하얀색 - 설명 보강) */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
                 <Zap size={16} className="text-amber-500" />
-                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">RSI Divergence</h3>
+                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Relative Strength</h3>
               </div>
               <div className="flex items-baseline gap-3 mb-4 text-left">
-                <span className="text-4xl font-black tracking-tighter text-slate-900 uppercase">{rsiDiv}</span>
+                <span className={`text-4xl font-black tracking-tighter uppercase ${rsiStrength === 'Stronger' ? 'text-amber-600' : 'text-slate-400'}`}>
+                  {rsiStrength}
+                </span>
                 <div className="px-2 py-0.5 rounded-full text-[10px] font-black border bg-amber-50 text-amber-600 border-amber-100 font-sans">
-                  RELATIVE STRENGTH
+                  MOMENTUM
                 </div>
               </div>
               <p className="text-xs text-slate-500 font-medium leading-relaxed border-t border-slate-50 pt-4 text-left font-sans">
-                BTC 강세와 ALT 강세의 <span className="text-amber-600 font-bold">강도 차이</span>를 분석합니다. 반전 지점을 포착합니다.
-              </p>
-            </div>
-          </div>
-
-          {/* 6. 체결 강도 (하얀색) */}
-          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-2 text-left">
-                <Scale size={16} className="text-indigo-500" />
-                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Order Intensity</h3>
-              </div>
-              <div className="flex items-baseline gap-3 mb-4 text-left">
-                <span className="text-5xl font-black tracking-tighter tabular-nums text-slate-900">{orderImbalance.toFixed(2)}</span>
-                <div className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${orderImbalance > 1 ? 'bg-indigo-50 text-indigo-600 border-indigo-100 font-sans' : 'bg-slate-50 text-slate-600 border-slate-100 font-sans'}`}>
-                  {orderImbalance > 1 ? 'BUY DOMINANT' : 'SELL DOMINANT'}
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 font-medium leading-relaxed border-t border-slate-50 pt-4 text-left font-sans">
-                실시간 매수/매도 호가 잔량의 <span className="text-indigo-600 font-bold">불균형</span>을 보여줍니다. 즉각적인 힘을 측정합니다.
+                비트코인 대비 변동 탄력성입니다. <span className="text-amber-600 font-bold">Stronger</span>는 알트코인의 힘이 더 강함을, <span className="text-slate-400 font-bold">Weaker</span>는 비트코인 위주의 장세임을 뜻합니다.
               </p>
             </div>
           </div>
@@ -300,7 +265,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* 알림 메시지 (절대값 기반 알람 수정 완료) */}
+        {/* 알림 메시지 */}
         {(currentGapMagnitude >= thresholdMagnitude || currentZScoreMagnitude >= zScoreThresholdMagnitude) && (
           <div className="bg-red-600 text-white p-5 rounded-3xl flex items-center justify-between animate-pulse shadow-xl shadow-red-200 border-2 border-red-500">
             <div className="flex items-center gap-4 text-left">
@@ -334,7 +299,6 @@ export default function App() {
 
           {showInfo && (
             <div className="p-8 space-y-8 border-t border-slate-100 text-left font-sans">
-              {/* 1-2-3 단계 가이드 (기존 설명 유지) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-black">1</div>
@@ -349,11 +313,10 @@ export default function App() {
                 <div className="space-y-2">
                   <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-black">3</div>
                   <h4 className="font-bold">트레이딩 전략</h4>
-                  <p className="text-sm text-slate-500 font-medium leading-relaxed font-sans">갭이 + 방향으로 커지면 <strong className="text-red-600 font-bold underline decoration-red-200 underline-offset-2">과매수</strong>, - 방향으로 커지면 <strong className="text-blue-600 font-bold underline decoration-blue-200 underline-offset-2">과매도</strong> 구간으로, 갭상승/갭하락 투자에 활용할 수 있습니다.</p>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed font-sans">갭이 + 방향으로 커지면 <strong className="text-red-600 font-bold underline decoration-red-200 underline-offset-2 font-sans">과매수</strong>, - 방향으로 커지면 <strong className="text-blue-600 font-bold underline decoration-blue-200 underline-offset-2 font-sans">과매도</strong> 구간으로, 갭상승/갭하락 투자에 활용할 수 있습니다.</p>
                 </div>
               </div>
 
-              {/* 시장 분석 가이드 (Tip) 섹션 (기존 유지 + 신규 추가) */}
               <div className="pt-6 border-t border-slate-50 space-y-4 font-sans text-left">
                 <div className="flex items-center gap-2 text-slate-800 font-bold mb-2">
                   <BookOpen size={18} className="text-blue-500" />
@@ -372,13 +335,6 @@ export default function App() {
                       갭이 평소보다 과하게 벌어진 이후에는 원상태로 돌아가려는 경향이 있습니다. 이 성질을 잘 활용해보세요.
                     </p>
                   </div>
-                  {/* 신규 지표 활용 팁 */}
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left font-sans">
-                    <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter text-left">Premium & Sentiment</p>
-                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                      김프가 급격히 끼면서 갭이 벌어질 때는 '거품'을 주의하고, 체결 강도가 1.0 이하로 떨어지면 반등의 힘이 약해진 것으로 판단합니다.
-                    </p>
-                  </div>
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left font-sans">
                     <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter text-left">Statistical Edge</p>
                     <p className="text-xs text-slate-600 leading-relaxed font-medium">
@@ -390,7 +346,7 @@ export default function App() {
 
               <div className="bg-blue-50 p-4 rounded-2xl flex gap-3 items-start border border-blue-100 text-left">
                 <ShieldCheck className="text-blue-600 shrink-0" size={20} />
-                <p className="text-[11px] text-blue-800 font-medium leading-tight text-left">업비트 Public API를 사용하여 어떠한 개인 정보나 키를 요구하지 않는 안전한 모니터링 환경입니다.</p>
+                <p className="text-[11px] text-blue-800 font-medium leading-tight text-left">업비트 실시간 시세 데이터를 사용하여 개인 정보나 키를 요구하지 않는 안전한 모니터링 환경입니다.</p>
               </div>
             </div>
           )}

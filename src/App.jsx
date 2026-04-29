@@ -20,8 +20,6 @@ import { Analytics } from '@vercel/analytics/react';
 
 const TARGET_ALTS = ['KRW-ETH', 'KRW-XRP', 'KRW-SOL', 'KRW-DOGE', 'KRW-TRX'];
 
-const TARGET_ALTS = ['KRW-ETH', 'KRW-XRP', 'KRW-SOL', 'KRW-DOGE', 'KRW-TRX'];
-
 const safeFetch = async (url) => {
   const proxies = ['', 'https://api.codetabs.com/v1/proxy?quest=', 'https://corsproxy.io/?'];
   for (const proxy of proxies) {
@@ -46,7 +44,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [alertThreshold, setAlertThreshold] = useState(2.0);
-  const [zScoreThreshold, setZScoreThreshold] = useState(3.0);
+  const [zScoreThreshold, setZScoreThreshold] = useState(3.0); // Z-Score 3.0 기준
   const [showInfo, setShowInfo] = useState(true);
 
   // 1. 마켓 목록 및 거시 지표 가져오기
@@ -126,16 +124,13 @@ export default function App() {
   const btc = tickers['KRW-BTC'];
   const alt = tickers[selectedAlt];
 
-  // 데이터 계산
   const btcRate = btc ? btc.signed_change_rate * 100 : 0;
   const altRate = alt ? alt.signed_change_rate * 100 : 0;
   const rateGap = btcRate - altRate;
 
-  // 알람용 갭 계산
   const currentGapMagnitude = Math.abs(rateGap);
   const thresholdMagnitude = Math.abs(alertThreshold);
 
-  // Z-Score 계산
   const zScoreValue = (rateGap / 1.2).toFixed(1);
   const zNum = parseFloat(zScoreValue);
   const currentZScoreMagnitude = Math.abs(zNum);
@@ -164,7 +159,7 @@ export default function App() {
 
         {/* 상단 헤더 */}
         <div className="flex flex-col md:flex-row md:items-center justify-between bg-white p-6 rounded-2xl shadow-sm border border-slate-100 gap-4">
-          <div className="flex items-center gap-4 text-left">
+          <div className="flex items-center gap-4">
             <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-100">
               <Activity size={28} />
             </div>
@@ -201,7 +196,7 @@ export default function App() {
         {/* 대시보드 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* 1. Price Momentum (Dark) - Alt Performance에서 변경 */}
+          {/* 1. Price Momentum (Dark) */}
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
@@ -223,7 +218,7 @@ export default function App() {
 
           {/* 2. Gap Z-Score (Dark) */}
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
-            <div className="relative z-10 text-left">
+            <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
                 <Gauge size={16} className="text-orange-400" />
                 <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Gap Z-Score</h3>
@@ -244,7 +239,7 @@ export default function App() {
           {/* 3. Volume Intensity (Light) */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10 text-left">
-              <div className="flex items-center gap-2 mb-2 text-left">
+              <div className="flex items-center gap-2 mb-2">
                 <BarChart3 size={16} className="text-purple-500" />
                 <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Volume Intensity</h3>
               </div>
@@ -263,7 +258,7 @@ export default function App() {
           {/* 4. Relative Strength (Light) */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10 text-left">
-              <div className="flex items-center gap-2 mb-2 text-left">
+              <div className="flex items-center gap-2 mb-2">
                 <Zap size={16} className="text-amber-500" />
                 <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Relative Strength</h3>
               </div>
@@ -284,7 +279,7 @@ export default function App() {
           {/* 5. BTC Dominance (Light) */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10 text-left">
-              <div className="flex items-center gap-2 mb-2 text-left">
+              <div className="flex items-center gap-2 mb-2">
                 <PieChart size={16} className="text-orange-500" />
                 <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">BTC Dominance</h3>
               </div>
@@ -303,7 +298,7 @@ export default function App() {
           {/* 6. MA20 Disparity (Light) */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10 text-left">
-              <div className="flex items-center gap-2 mb-2 text-left">
+              <div className="flex items-center gap-2 mb-2">
                 <MoveUpRight size={16} className="text-emerald-500" />
                 <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">MA20 Disparity</h3>
               </div>
@@ -361,7 +356,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 정보성 섹션 (가이드 문구 수정 반영) */}
+        {/* 정보성 섹션 */}
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mt-12 text-left font-sans">
           <button onClick={() => setShowInfo(!showInfo)} className="w-full p-6 flex items-center justify-between bg-slate-50/50 hover:bg-slate-50 transition-colors">
             <div className="flex items-center gap-3">
@@ -426,9 +421,9 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="bg-blue-50 p-4 rounded-2xl flex gap-3 items-start border border-blue-100 text-left">
+              <div className="bg-blue-50 p-4 rounded-2xl flex gap-3 items-start border border-blue-100 text-left font-sans">
                 <ShieldCheck className="text-blue-600 shrink-0" size={20} />
-                <p className="text-[11px] text-blue-800 font-medium leading-tight text-left font-sans">업비트 및 글로벌 금융 API를 사용하여 실시간으로 데이터를 분석하는 투명한 모니터링 환경입니다.</p>
+                <p className="text-[11px] text-blue-800 font-medium leading-tight text-left">업비트 및 글로벌 금융 API를 사용하여 실시간으로 데이터를 분석하는 투명한 모니터링 환경입니다.</p>
               </div>
             </div>
           )}
@@ -436,11 +431,11 @@ export default function App() {
 
         <footer className="mt-12 pt-10 border-t border-slate-200 text-center space-y-6 px-4 font-sans">
           <div className="flex justify-center gap-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
-            <button onClick={() => window.open('https://www.google.com/policies/technologies/ads', '_blank')} className="hover:text-blue-600 transition-colors font-sans">Cookies</button>
-            <button onClick={() => window.open('https://policies.google.com/privacy', '_blank')} className="hover:text-blue-600 transition-colors font-sans">Privacy Policy</button>
+            <button onClick={() => window.open('https://www.google.com/policies/technologies/ads', '_blank')} className="hover:text-blue-600 transition-colors">Cookies</button>
+            <button onClick={() => window.open('https://policies.google.com/privacy', '_blank')} className="hover:text-blue-600 transition-colors">Privacy Policy</button>
             <span>Contact: adminsequenceai@gmail.com</span>
           </div>
-          <div className="text-[10px] text-slate-300 leading-relaxed max-w-lg mx-auto tabular-nums text-center italic font-medium font-sans">
+          <div className="text-[10px] text-slate-300 leading-relaxed max-w-lg mx-auto tabular-nums text-center italic font-medium">
             <p>본 서비스는 정보 제공을 위한 모니터링 도구입니다. 모든 투자 책임은 본인에게 있습니다.</p>
             <p className="mt-2 font-black text-slate-400 tracking-tighter not-italic uppercase tracking-widest text-center">© 2024 COIN GAP MONITOR. BY SEQUEC AI.</p>
           </div>

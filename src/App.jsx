@@ -89,7 +89,14 @@ export default function App() {
   const alt = tickers[selectedAlt];
   const btcRate = btc ? btc.signed_change_rate * 100 : 0;
   const altRate = alt ? alt.signed_change_rate * 100 : 0;
+
+  // 비트코인 변동률에서 알트코인 변동률을 뺀 값
   const rateGap = btcRate - altRate;
+
+  // 알람을 결정하는 기준값 (절대값으로 격차 측정)
+  const currentGapMagnitude = Math.abs(rateGap);
+  const thresholdMagnitude = Math.abs(alertThreshold);
+
   const altName = markets.find(m => m.market === selectedAlt)?.korean_name || selectedAlt;
 
   return (
@@ -98,30 +105,36 @@ export default function App() {
 
         {/* 상단 헤더 */}
         <div className="flex flex-col md:flex-row md:items-center justify-between bg-white p-6 rounded-2xl shadow-sm border border-slate-100 gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 text-left">
             <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-100">
               <Activity size={28} />
             </div>
-            <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">코인 갭 모니터</h1>
-              <div className="flex items-center gap-2 text-slate-400 mt-1">
+            <div className="text-left">
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight text-left leading-none">코인 갭 모니터</h1>
+              <div className="flex items-center gap-2 text-slate-400 mt-1 text-left">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                 </span>
-                <p className="text-[10px] font-bold uppercase">{lastUpdated.toLocaleTimeString()} 업데이트</p>
+                <p className="text-[10px] font-bold uppercase text-left tracking-wider">{lastUpdated.toLocaleTimeString()} 실시간</p>
               </div>
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter">Gap Alarm(%)</label>
-              <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums" value={alertThreshold} onChange={(e) => setAlertThreshold(Number(e.target.value))} />
+            <div className="flex flex-col gap-1 text-left">
+              <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter text-left">Gap Alarm(%)</label>
+              <input
+                type="number"
+                step="0.1"
+                className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums text-left"
+                value={alertThreshold}
+                onChange={(e) => setAlertThreshold(Number(e.target.value))}
+              />
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter">Compare</label>
-              <select className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-40 font-bold outline-none cursor-pointer focus:ring-2 focus:ring-blue-500 transition-all" value={selectedAlt} onChange={(e) => setSelectedAlt(e.target.value)}>
+            <div className="flex flex-col gap-1 text-left">
+              <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter text-left">Compare</label>
+              <select className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-40 font-bold outline-none cursor-pointer focus:ring-2 focus:ring-blue-500 transition-all text-left" value={selectedAlt} onChange={(e) => setSelectedAlt(e.target.value)}>
                 {markets.map((m) => (<option key={m.market} value={m.market}>{m.korean_name}</option>))}
               </select>
             </div>
@@ -130,37 +143,37 @@ export default function App() {
 
         {/* 갭 수치 메인 카드 */}
         <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden group">
-          <div className="relative z-10">
-            <h3 className="text-slate-400 font-bold mb-1 text-lg uppercase tracking-widest">BTC vs {altName} Spread</h3>
-            <div className="flex items-baseline gap-3 mb-6">
-              <span className="text-6xl md:text-8xl font-black tracking-tighter tabular-nums">{Math.abs(rateGap).toFixed(2)}%</span>
+          <div className="relative z-10 text-left">
+            <h3 className="text-slate-400 font-bold mb-1 text-lg uppercase tracking-widest text-left">BTC vs {altName} Spread</h3>
+            <div className="flex items-baseline gap-3 mb-6 text-left">
+              <span className="text-6xl md:text-8xl font-black tracking-tighter tabular-nums text-left">{currentGapMagnitude.toFixed(2)}%</span>
               <div className={`px-3 py-1 rounded-full text-xs font-black border ${rateGap > 0 ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}>
                 {rateGap > 0 ? 'BTC STRONG' : 'ALT STRONG'}
               </div>
             </div>
-            <div className="p-5 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-xl inline-block">
-              <p className="text-base font-medium leading-relaxed">
-                현재 {altName}의 변동률이 비트코인 대비 <span className={`font-black ${rateGap > 0 ? 'text-blue-400' : 'text-red-400'}`}>{Math.abs(rateGap).toFixed(2)}%p {rateGap > 0 ? '낮게' : '높게'}</span> 형성되어 있습니다.
+            <div className="p-5 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-xl text-left inline-block">
+              <p className="text-base font-medium leading-relaxed text-left">
+                현재 {altName}의 변동률이 비트코인 대비 <span className={`font-black ${rateGap > 0 ? 'text-blue-400' : 'text-red-400'}`}>{currentGapMagnitude.toFixed(2)}%p {rateGap > 0 ? '낮게' : '높게'}</span> 형성되어 있습니다.
               </p>
             </div>
           </div>
           <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-600/20 rounded-full blur-[100px]"></div>
         </div>
 
-        {/* 상세 정보 그리드 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-            <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-widest">Bitcoin (BTC)</p>
-            <p className="text-3xl font-black mb-1 tracking-tight tabular-nums">{btc?.trade_price.toLocaleString()} KRW</p>
-            <div className={`flex items-center gap-1 font-bold ${btc?.change === 'RISE' ? 'text-red-500' : 'text-blue-500'}`}>
+        {/* 상세 가격 정보 그리드 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-left">
+            <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-widest text-left">Bitcoin (BTC)</p>
+            <p className="text-3xl font-black mb-1 tracking-tight tabular-nums text-left">{btc?.trade_price.toLocaleString()} KRW</p>
+            <div className={`flex items-center gap-1 font-bold ${btc?.change === 'RISE' ? 'text-red-500' : 'text-blue-500'} text-left`}>
               {btc?.change === 'RISE' ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
               <span>{(btc?.signed_change_rate * 100).toFixed(2)}%</span>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-            <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-widest">{altName}</p>
-            <p className="text-3xl font-black mb-1 tracking-tight tabular-nums">{alt?.trade_price.toLocaleString()} KRW</p>
-            <div className={`flex items-center gap-1 font-bold ${alt?.change === 'RISE' ? 'text-red-500' : 'text-blue-500'}`}>
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-left">
+            <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-widest text-left">{altName}</p>
+            <p className="text-3xl font-black mb-1 tracking-tight tabular-nums text-left">{alt?.trade_price.toLocaleString()} KRW</p>
+            <div className={`flex items-center gap-1 font-bold ${alt?.change === 'RISE' ? 'text-red-500' : 'text-blue-500'} text-left`}>
               {alt?.change === 'RISE' ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
               <span>{(alt?.signed_change_rate * 100).toFixed(2)}%</span>
             </div>
@@ -168,11 +181,14 @@ export default function App() {
         </div>
 
         {/* 알림 메시지 */}
-        {Math.abs(rateGap) >= alertThreshold && (
+        {currentGapMagnitude >= thresholdMagnitude && (
           <div className="bg-red-600 text-white p-5 rounded-3xl flex items-center justify-between animate-pulse shadow-xl shadow-red-200 border-2 border-red-500">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 text-left">
               <Bell size={24} className="shrink-0" />
-              <p className="font-black text-lg uppercase leading-none">Gap Alert! ({Math.abs(rateGap).toFixed(2)}%)</p>
+              <div className="text-left">
+                <p className="font-black text-lg uppercase leading-none text-left">Gap Alert!</p>
+                <p className="text-sm font-bold opacity-90 mt-1">{currentGapMagnitude.toFixed(2)}% 격차 발생</p>
+              </div>
             </div>
             <ChevronRight size={24} />
           </div>

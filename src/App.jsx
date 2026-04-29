@@ -144,16 +144,13 @@ export default function App() {
   const btcRate = btc ? btc.signed_change_rate * 100 : 0;
   const altRate = alt ? alt.signed_change_rate * 100 : 0;
 
-  // 갭 계산 (Z-Score용으로 유지)
   const rateGap = btcRate - altRate;
-
-  // Z-Score 계산
   const zScoreValue = (rateGap / 1.2).toFixed(1);
   const zNum = parseFloat(zScoreValue);
   const currentZScoreMagnitude = Math.abs(zNum);
   const zScoreThresholdMagnitude = Math.abs(zScoreThreshold);
 
-  // 알람 트리거 데이터: 이제 momentum5m(5분 변동률)을 기준으로 판단합니다.
+  // 알람 트리거: 최근 5분 변동률 기준
   const currentDropValue = momentum5m;
   const currentDropMagnitude = Math.abs(momentum5m);
   const thresholdMagnitude = Math.abs(dropThreshold);
@@ -217,7 +214,6 @@ export default function App() {
 
         {/* 대시보드 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
             <div className="relative z-10 text-left font-sans">
               <div className="flex items-center gap-2 mb-2 text-left">
@@ -333,37 +329,37 @@ export default function App() {
 
         {/* 상세 가격 정보 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left font-sans">
-          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-left">
-            <p className="text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">Bitcoin (BTC)</p>
-            <p className="text-3xl font-black mb-1 tracking-tight tabular-nums text-left">{btc?.trade_price.toLocaleString()} KRW</p>
-            <div className="flex items-center justify-between">
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-left font-sans">
+            <p className="text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest font-sans">Bitcoin (BTC)</p>
+            <p className="text-3xl font-black mb-1 tracking-tight tabular-nums text-left font-sans">{btc?.trade_price.toLocaleString()} KRW</p>
+            <div className="flex items-center justify-between font-sans">
               <div className={`flex items-center gap-1 font-bold ${btc?.change === 'RISE' ? 'text-red-500' : 'text-blue-500'}`}>
                 <span>{(btc?.signed_change_rate * 100).toFixed(2)}%</span>
               </div>
-              <span className="text-[10px] text-slate-400 font-bold tabular-nums">Vol: {(btcVol / 100000000).toLocaleString(undefined, { maximumFractionDigits: 0 })}억</span>
+              <span className="text-[10px] text-slate-400 font-bold tabular-nums font-sans">Vol: {(btcVol / 100000000).toLocaleString(undefined, { maximumFractionDigits: 0 })}억</span>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-left">
-            <p className="text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">{altName}</p>
-            <p className="text-3xl font-black mb-1 tracking-tight tabular-nums text-left">{alt?.trade_price.toLocaleString()} KRW</p>
-            <div className="flex items-center justify-between">
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-left font-sans">
+            <p className="text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest font-sans">{altName}</p>
+            <p className="text-3xl font-black mb-1 tracking-tight tabular-nums text-left font-sans">{alt?.trade_price.toLocaleString()} KRW</p>
+            <div className="flex items-center justify-between font-sans">
               <div className={`flex items-center gap-1 font-bold ${alt?.change === 'RISE' ? 'text-red-500' : 'text-blue-500'}`}>
                 <span>{(alt?.signed_change_rate * 100).toFixed(2)}%</span>
               </div>
-              <span className="text-[10px] text-slate-400 font-bold tabular-nums">Vol: {(altVol / 100000000).toLocaleString(undefined, { maximumFractionDigits: 0 })}억</span>
+              <span className="text-[10px] text-slate-400 font-bold tabular-nums font-sans">Vol: {(altVol / 100000000).toLocaleString(undefined, { maximumFractionDigits: 0 })}억</span>
             </div>
           </div>
         </div>
 
         {/* 알림 메시지 */}
-        {(currentGapMagnitude >= thresholdMagnitude || currentZScoreMagnitude >= zScoreThresholdMagnitude) && (
-          <div className="bg-red-600 text-white p-5 rounded-3xl flex items-center justify-between animate-pulse shadow-xl shadow-red-200 border-2 border-red-500">
-            <div className="flex items-center gap-4 text-left">
+        {(currentDropMagnitude >= thresholdMagnitude || currentZScoreMagnitude >= zScoreThresholdMagnitude) && (
+          <div className="bg-red-600 text-white p-5 rounded-3xl flex items-center justify-between animate-pulse shadow-xl shadow-red-200 border-2 border-red-500 font-sans">
+            <div className="flex items-center gap-4 text-left font-sans">
               <Bell size={24} className="shrink-0" />
-              <div className="text-left">
-                <p className="font-black text-lg uppercase leading-none text-left tracking-tighter">Market Volatility Alert!</p>
-                <p className="text-xs font-bold opacity-90 mt-1">
-                  {currentGapMagnitude >= thresholdMagnitude && `Gap: ${currentGapMagnitude.toFixed(2)}% `}
+              <div className="text-left font-sans">
+                <p className="font-black text-lg uppercase leading-none text-left tracking-tighter font-sans">Market Alert!</p>
+                <p className="text-xs font-bold opacity-90 mt-1 font-sans">
+                  {currentDropMagnitude >= thresholdMagnitude && `Momentum: ${currentDropValue.toFixed(2)}% `}
                   {currentZScoreMagnitude >= zScoreThresholdMagnitude && `Z-Score: ${zScoreValue}`}
                 </p>
               </div>
@@ -374,86 +370,52 @@ export default function App() {
 
         {/* 정보성 섹션 */}
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mt-12 text-left font-sans">
-          <button onClick={() => setShowInfo(!showInfo)} className="w-full p-6 flex items-center justify-between bg-slate-50/50 hover:bg-slate-50 transition-colors">
-            <div className="flex items-center gap-3">
+          <button onClick={() => setShowInfo(!showInfo)} className="w-full p-6 flex items-center justify-between bg-slate-50/50 hover:bg-slate-50 transition-colors font-sans">
+            <div className="flex items-center gap-3 font-sans">
               <Info className="text-blue-500" size={20} />
               <h2 className="text-lg font-bold text-slate-800 leading-none font-sans">어떻게 활용하나요?</h2>
             </div>
-            <div className={`transform transition-transform ${showInfo ? 'rotate-90' : ''}`}>
+            <div className={`transform transition-transform ${showInfo ? 'rotate-90' : ''} font-sans`}>
               <ChevronRight size={20} />
             </div>
           </button>
 
           {showInfo && (
             <div className="p-8 space-y-8 border-t border-slate-100 text-left font-sans">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left font-sans">
+                <div className="space-y-2 font-sans">
                   <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-black">1</div>
                   <h4 className="font-bold">비트코인 기준</h4>
                   <p className="text-sm text-slate-500 font-medium leading-relaxed font-sans">비트코인의 최근 24시간 변동률을 시장의 기준으로 잡습니다.</p>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 font-sans">
                   <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-black">2</div>
                   <h4 className="font-bold">상대적 갭 측정</h4>
                   <p className="text-sm text-slate-500 font-medium leading-relaxed font-sans">알트코인이 비트코인 대비 덜 상승/하락한 갭을 수치화합니다.</p>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 font-sans">
                   <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-black">3</div>
                   <h4 className="font-bold">트레이딩 전략</h4>
-                  <p className="text-sm text-slate-500 font-medium leading-relaxed font-sans">갭이 + 방향으로 커지면 <strong className="text-red-600 font-bold underline decoration-red-200 underline-offset-2 font-sans">과매수</strong>, - 방향으로 커지면 <strong className="text-blue-600 font-bold underline decoration-blue-200 underline-offset-2 font-sans">과매도</strong> 구간으로 활용합니다.</p>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed font-sans">갭이 + 방향으로 커지면 <strong className="text-red-600 font-bold underline decoration-red-200 underline-offset-2">과매수</strong>, - 방향으로 커지면 <strong className="text-blue-600 font-bold underline decoration-blue-200 underline-offset-2">과매도</strong> 구간으로 활용합니다.</p>
                 </div>
               </div>
-
-              <div className="pt-6 border-t border-slate-50 space-y-4 font-sans text-left">
-                <div className="flex items-center gap-2 text-slate-800 font-bold mb-2">
-                  <BookOpen size={18} className="text-blue-500" />
-                  <span>시장 분석 가이드 (Tip)</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left font-sans">
-                    <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter text-left">Relative Indicators</p>
-                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                      <strong className="text-red-600 font-bold underline decoration-red-200 underline-offset-2 font-sans">과매수</strong>가 발생했을 경우, 알트코인의 <strong>하락</strong> 가능성을 체크해 보세요. <strong className="text-blue-600 font-bold underline decoration-blue-200 underline-offset-2 font-sans">과매도</strong>가 발생했을 경우, 알트코인의 <strong>상승</strong> 가능성을 체크해 보세요.
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left font-sans">
-                    <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter text-left">Gap Recovery</p>
-                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                      갭이 평소보다 과하게 벌어진 이후에는 <strong className="text-orange-600 font-bold">원상태로 돌아가려는 경향</strong>이 있습니다. 이 성질을 잘 활용해보세요.
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left font-sans">
-                    <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter text-left">Statistical Edge</p>
-                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                      Z-Score가 <strong className="text-orange-600 font-bold">3.0</strong>을 넘어서면 비트코인이 알트 대비 통계적 한계치까지 과하게 상승한 가격 왜곡 상태를 의미하며, 이후 갭이 좁혀지며 알트코인이 키맞추기 <strong className="text-red-600 font-bold">상승</strong>을 할 가능성이 높습니다. 반대로 <strong className="text-blue-600 font-bold">-3.0</strong>을 초과한다면 알트코인이 키맞추기 <strong className="text-blue-600 font-bold">하락</strong>을 할 가능성이 높습니다.
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left font-sans">
-                    <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter text-left">Dominance Context</p>
-                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                      비트코인 도미넌스가 <span className="text-orange-600 font-bold">강하게 상승</span> 중일 때는 갭이 벌어져도 알트코인 반등이 약할 수 있으니 주의가 필요합니다.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               <div className="bg-blue-50 p-4 rounded-2xl flex gap-3 items-start border border-blue-100 text-left font-sans">
                 <ShieldCheck className="text-blue-600 shrink-0" size={20} />
-                <p className="text-[11px] text-blue-800 font-medium leading-tight text-left">업비트 및 글로벌 금융 API를 사용하여 실시간으로 데이터를 분석하는 투명한 모니터링 환경입니다.</p>
+                <p className="text-[11px] text-blue-800 font-medium leading-tight text-left font-sans">업비트 및 글로벌 금융 API를 사용하여 실시간으로 데이터를 분석하는 투명한 모니터링 환경입니다.</p>
               </div>
             </div>
           )}
         </div>
 
         <footer className="mt-12 pt-10 border-t border-slate-200 text-center space-y-6 px-4 font-sans">
-          <div className="flex justify-center gap-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
-            <button onClick={() => window.open('https://www.google.com/policies/technologies/ads', '_blank')} className="hover:text-blue-600 transition-colors">Cookies</button>
-            <button onClick={() => window.open('https://policies.google.com/privacy', '_blank')} className="hover:text-blue-600 transition-colors">Privacy Policy</button>
-            <span>Contact: adminsequenceai@gmail.com</span>
+          <div className="flex justify-center gap-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center font-sans">
+            <button onClick={() => window.open('https://www.google.com/policies/technologies/ads', '_blank')} className="hover:text-blue-600 transition-colors font-sans">Cookies</button>
+            <button onClick={() => window.open('https://policies.google.com/privacy', '_blank')} className="hover:text-blue-600 transition-colors font-sans">Privacy Policy</button>
+            <span className="font-sans">Contact: adminsequenceai@gmail.com</span>
           </div>
-          <div className="text-[10px] text-slate-300 leading-relaxed max-w-lg mx-auto tabular-nums text-center italic font-medium">
-            <p>본 서비스는 정보 제공을 위한 모니터링 도구입니다. 모든 투자 책임은 본인에게 있습니다.</p>
-            <p className="mt-2 font-black text-slate-400 tracking-tighter not-italic uppercase tracking-widest text-center">© 2024 COIN GAP MONITOR. BY SEQUEC AI.</p>
+          <div className="text-[10px] text-slate-300 leading-relaxed max-w-lg mx-auto tabular-nums text-center italic font-medium font-sans">
+            <p className="font-sans">본 서비스는 정보 제공을 위한 모니터링 도구입니다. 모든 투자 책임은 본인에게 있습니다.</p>
+            <p className="mt-2 font-black text-slate-400 tracking-tighter not-italic uppercase tracking-widest text-center font-sans">© 2024 COIN GAP MONITOR. BY SEQUEC AI.</p>
           </div>
         </footer>
       </div>

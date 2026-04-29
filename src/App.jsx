@@ -1,23 +1,3 @@
-import React, { useState, useEffect } from 'react';
-import {
-  TrendingUp,
-  TrendingDown,
-  RefreshCcw,
-  Activity,
-  Coins,
-  Bell,
-  Info,
-  ChevronRight,
-  ShieldCheck,
-  BookOpen,
-  BarChart3,
-  Zap,
-  Gauge,
-  PieChart,
-  MoveUpRight
-} from 'lucide-react';
-import { Analytics } from '@vercel/analytics/react';
-
 const TARGET_ALTS = ['KRW-ETH', 'KRW-XRP', 'KRW-SOL', 'KRW-DOGE', 'KRW-TRX'];
 
 const safeFetch = async (url) => {
@@ -158,7 +138,11 @@ export default function App() {
   const volRatio = btcVol > 0 ? (altVol / btcVol) * 100 : 0;
   const rsiStrength = altRate > btcRate ? 'Stronger' : 'Weaker';
   const disparity = (alt && ma20 > 0) ? (alt.trade_price / ma20) * 100 : 100;
-  const altName = markets.find(m => m.market === selectedAlt)?.korean_name || selectedAlt;
+
+  // 명칭 변환: KRW-XRP인 경우 '리플'로 반환
+  const getDisplayName = (m) => m.market === 'KRW-XRP' ? '리플' : m.korean_name;
+  const currentMarket = markets.find(m => m.market === selectedAlt);
+  const altName = currentMarket ? getDisplayName(currentMarket) : selectedAlt;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pt-6 pb-20 px-4 text-left">
@@ -182,7 +166,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 font-sans">
+          <div className="flex flex-col sm:flex-row gap-4 font-sans text-left">
             <div className="flex flex-col gap-1 text-left">
               <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">DROP ALERT</label>
               <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums text-left" value={dropThreshold} onChange={(e) => setDropThreshold(Number(e.target.value))} />
@@ -193,8 +177,8 @@ export default function App() {
             </div>
             <div className="flex flex-col gap-1 text-left">
               <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter">Compare</label>
-              <select className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-40 font-bold outline-none cursor-pointer focus:ring-2 focus:ring-blue-500 transition-all text-left" value={selectedAlt} onChange={(e) => setSelectedAlt(e.target.value)}>
-                {markets.map((m) => (<option key={m.market} value={m.market}>{m.korean_name}</option>))}
+              <select className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-40 font-bold outline-none cursor-pointer focus:ring-2 focus:ring-blue-500 transition-all text-left font-sans" value={selectedAlt} onChange={(e) => setSelectedAlt(e.target.value)}>
+                {markets.map((m) => (<option key={m.market} value={m.market}>{getDisplayName(m)}</option>))}
               </select>
             </div>
           </div>
@@ -202,6 +186,7 @@ export default function App() {
 
         {/* 대시보드 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* 1. Price Momentum (5분 기준) */}
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
             <div className="relative z-10 text-left font-sans">
               <div className="flex items-center gap-2 mb-2">
@@ -223,6 +208,7 @@ export default function App() {
             <div className="absolute -top-12 -right-12 w-48 h-48 bg-yellow-400/5 rounded-full blur-[60px]"></div>
           </div>
 
+          {/* 2. Gap Z-Score */}
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
             <div className="relative z-10 text-left font-sans">
               <div className="flex items-center gap-2 mb-2 text-left">
@@ -274,7 +260,7 @@ export default function App() {
                   MOMENTUM
                 </div>
               </div>
-              <p className="text-xs text-slate-500 font-medium leading-relaxed border-t border-slate-50 pt-4 font-sans">
+              <p className="text-xs text-slate-500 font-medium leading-relaxed border-t border-slate-50 pt-4 text-left font-sans">
                 비트코인 대비 탄력성입니다. <span className="text-amber-600 font-bold">Stronger</span>는 알트 우세, <span className="text-slate-400 font-bold">Weaker</span>는 비트코인 위주 장세를 뜻합니다.
               </p>
             </div>
@@ -341,7 +327,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* 알림 메시지 (두 줄 구성 및 텍스트 최적화) */}
+        {/* 알림 메시지 (두 줄 구성 및 명칭 통일) */}
         {(currentDropMagnitude >= dropThreshold || currentZScoreMagnitude >= zScoreThreshold) && (
           <div className="bg-red-600 text-white p-5 rounded-3xl flex items-center justify-between animate-pulse shadow-xl shadow-red-200 border-2 border-red-500 font-sans">
             <div className="flex items-center gap-4 text-left">
@@ -364,7 +350,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 정보성 섹션 (완벽 복구 + 새로운 팁 추가) */}
+        {/* 정보성 섹션 */}
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mt-12 text-left font-sans">
           <button onClick={() => setShowInfo(!showInfo)} className="w-full p-6 flex items-center justify-between bg-slate-50/50 hover:bg-slate-50 transition-colors">
             <div className="flex items-center gap-3 font-sans">
@@ -426,7 +412,6 @@ export default function App() {
                       비트코인 도미넌스가 <span className="text-orange-600 font-bold">강하게 상승</span> 중일 때는 갭이 벌어져도 알트코인 반등이 약할 수 있으니 주의가 필요합니다.
                     </p>
                   </div>
-                  {/* 요청하신 복합 신호 가이드 추가 */}
                   <div className="bg-slate-50 p-4 rounded-2xl border border-red-100 text-left md:col-span-2">
                     <p className="text-xs font-black text-red-400 mb-1 uppercase tracking-tighter">Dual Signal Alert (Extreme Signal)</p>
                     <p className="text-xs text-slate-600 leading-relaxed font-medium">
@@ -446,8 +431,8 @@ export default function App() {
 
         <footer className="mt-12 pt-10 border-t border-slate-200 text-center space-y-6 px-4 font-sans">
           <div className="flex justify-center gap-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
-            <button onClick={() => window.open('https://www.google.com/policies/technologies/ads', '_blank')} className="hover:text-blue-600 transition-colors">Cookies</button>
-            <button onClick={() => window.open('https://policies.google.com/privacy', '_blank')} className="hover:text-blue-600 transition-colors">Privacy Policy</button>
+            <button onClick={() => window.open('https://www.google.com/policies/technologies/ads', '_blank')} className="hover:text-blue-600 transition-colors font-sans">Cookies</button>
+            <button onClick={() => window.open('https://policies.google.com/privacy', '_blank')} className="hover:text-blue-600 transition-colors font-sans">Privacy Policy</button>
             <span>Contact: adminsequenceai@gmail.com</span>
           </div>
           <div className="text-[10px] text-slate-300 leading-relaxed max-w-lg mx-auto tabular-nums text-center italic font-medium font-sans">

@@ -37,14 +37,14 @@ const safeFetch = async (url) => {
 
 export default function App() {
   const [markets, setMarkets] = useState([]);
-  const [selectedAlt, setSelectedAlt] = useState('KRW-SOL');
+  const [selectedAlt, setSelectedAlt] = useState(TARGET_ALTS[0]);
   const [tickers, setTickers] = useState({});
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [alertThreshold, setAlertThreshold] = useState(2.0);
+  const [zScoreThreshold, setZScoreThreshold] = useState(2.0);
   const [showInfo, setShowInfo] = useState(true);
 
-  // 1. 마켓 목록 가져오기
   useEffect(() => {
     let isMounted = true;
     const fetchMarkets = async () => {
@@ -60,7 +60,6 @@ export default function App() {
     return () => { isMounted = false; };
   }, []);
 
-  // 2. 실시간 시세 업데이트
   useEffect(() => {
     let isMounted = true;
     let timeoutId = null;
@@ -95,10 +94,11 @@ export default function App() {
   const btc = tickers['KRW-BTC'];
   const alt = tickers[selectedAlt];
 
-  // 지표 계산 로직
   const btcRate = btc ? btc.signed_change_rate * 100 : 0;
   const altRate = alt ? alt.signed_change_rate * 100 : 0;
   const rateGap = btcRate - altRate;
+
+  // 알람 판정용 절대값 로직
   const currentGapMagnitude = Math.abs(rateGap);
   const thresholdMagnitude = Math.abs(alertThreshold);
 
@@ -106,9 +106,11 @@ export default function App() {
   const altVol = alt ? alt.acc_trade_price_24h : 0;
   const volRatio = btcVol > 0 ? (altVol / btcVol) * 100 : 0;
 
-  // 신규 지표를 위한 시뮬레이션 데이터 (실제 데이터 소스 연동 전 레이아웃 및 텍스트 확인용)
   const kimchiPremium = 1.25;
-  const zScore = (rateGap / 1.5).toFixed(1);
+  const zScoreValue = (rateGap / 1.5).toFixed(1);
+  const currentZScoreMagnitude = Math.abs(parseFloat(zScoreValue));
+  const zScoreThresholdMagnitude = Math.abs(zScoreThreshold); // Z-Score 알람 기준도 절대값 처리하여 버그 수정
+
   const rsiDiv = altRate > btcRate ? 'Bullish' : 'Neutral';
   const orderImbalance = 1.08;
 
@@ -138,8 +140,12 @@ export default function App() {
 
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex flex-col gap-1 text-left">
-              <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter">Gap Alarm(%)</label>
+              <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter">Gap Alert(%)</label>
               <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums text-left" value={alertThreshold} onChange={(e) => setAlertThreshold(Number(e.target.value))} />
+            </div>
+            <div className="flex flex-col gap-1 text-left">
+              <label className="text-[10px] font-black text-orange-400 px-1 uppercase tracking-tighter">Z-Score Alert</label>
+              <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-orange-500 transition-all tabular-nums text-left" value={zScoreThreshold} onChange={(e) => setZScoreThreshold(Number(e.target.value))} />
             </div>
             <div className="flex flex-col gap-1 text-left">
               <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter">Compare</label>
@@ -153,7 +159,7 @@ export default function App() {
         {/* 메인 대시보드 그리드 (2열 나열) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* 1. 가격 갭 */}
+          {/* 1. 가격 격차 (어두운 색) */}
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
@@ -173,27 +179,46 @@ export default function App() {
             <div className="absolute -top-12 -right-12 w-48 h-48 bg-blue-600/10 rounded-full blur-[60px]"></div>
           </div>
 
-          {/* 2. 거래량 갭 */}
+          {/* 2. Z-Score (어두운 색 - 위치 이동) */}
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
-                <BarChart3 size={16} className="text-purple-400" />
-                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Volume Intensity</h3>
+                <Gauge size={16} className="text-orange-400" />
+                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Gap Z-Score</h3>
               </div>
               <div className="flex items-baseline gap-3 mb-4 text-left">
-                <span className="text-5xl font-black tracking-tighter tabular-nums text-purple-400">{volRatio.toFixed(1)}%</span>
-                <div className="px-2 py-0.5 rounded-full text-[10px] font-black border bg-purple-500/10 text-purple-300 border-purple-500/30">
-                  RELATIVE TO BTC
+                <span className="text-5xl font-black tracking-tighter tabular-nums">{zScoreValue}</span>
+                <div className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${currentZScoreMagnitude >= zScoreThresholdMagnitude ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' : 'bg-white/5 text-slate-400 border-white/10'}`}>
+                  {currentZScoreMagnitude >= zScoreThresholdMagnitude ? 'OUTLIER' : 'NORMAL'}
                 </div>
               </div>
               <p className="text-xs text-slate-400 font-medium leading-relaxed border-t border-white/10 pt-4 text-left">
-                BTC 거래대금 대비 {altName}의 비율입니다. 수치가 높을수록 <span className="text-white font-bold">시장 관심도</span>가 높음을 의미합니다.
+                평소 갭 대비 현재의 <span className="text-orange-400 font-bold">비정상성</span>을 나타냅니다. 고점/저점 신호로 활용됩니다.
               </p>
             </div>
-            <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-purple-600/10 rounded-full blur-[100px]"></div>
+            <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-orange-600/10 rounded-full blur-[60px]"></div>
           </div>
 
-          {/* 3. 김치 프리미엄 */}
+          {/* 3. 거래량 강도 (하얀색 - 위치 이동) */}
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-2 text-left">
+                <BarChart3 size={16} className="text-purple-500" />
+                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Volume Intensity</h3>
+              </div>
+              <div className="flex items-baseline gap-3 mb-4 text-left">
+                <span className="text-5xl font-black tracking-tighter tabular-nums text-slate-900">{volRatio.toFixed(1)}%</span>
+                <div className="px-2 py-0.5 rounded-full text-[10px] font-black border bg-purple-50 text-purple-600 border-purple-100 font-sans">
+                  RELATIVE TO BTC
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 font-medium leading-relaxed border-t border-slate-50 pt-4 text-left font-sans">
+                BTC 거래대금 대비 {altName}의 비율입니다. 수치가 높을수록 <span className="text-purple-600 font-bold">시장 관심도</span>가 높음을 의미합니다.
+              </p>
+            </div>
+          </div>
+
+          {/* 4. 김치 프리미엄 (하얀색) */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
@@ -212,26 +237,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* 4. 갭 통계 스코어 */}
-          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-2 text-left">
-                <Gauge size={16} className="text-orange-500" />
-                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest font-sans">Gap Z-Score</h3>
-              </div>
-              <div className="flex items-baseline gap-3 mb-4 text-left">
-                <span className="text-5xl font-black tracking-tighter tabular-nums text-slate-900">{zScore}</span>
-                <div className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${Math.abs(zScore) > 1.5 ? 'bg-orange-50 text-orange-600 border-orange-100 font-sans' : 'bg-slate-50 text-slate-600 border-slate-100 font-sans'}`}>
-                  {Math.abs(zScore) > 1.5 ? 'VOLATILE' : 'STABLE'}
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 font-medium leading-relaxed border-t border-slate-50 pt-4 text-left font-sans">
-                평소 갭 대비 현재의 <span className="text-orange-600 font-bold">비정상성</span>을 나타냅니다. 고점/저점 신호로 활용됩니다.
-              </p>
-            </div>
-          </div>
-
-          {/* 5. RSI 다이버전스 */}
+          {/* 5. RSI 다이버전스 (하얀색) */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
@@ -250,7 +256,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* 6. 체결 강도 */}
+          {/* 6. 체결 강도 (하얀색) */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2 text-left">
@@ -294,14 +300,17 @@ export default function App() {
           </div>
         </div>
 
-        {/* 알림 메시지 (절대값 기준) */}
-        {currentGapMagnitude >= thresholdMagnitude && (
+        {/* 알림 메시지 (절대값 기반 알람 수정 완료) */}
+        {(currentGapMagnitude >= thresholdMagnitude || currentZScoreMagnitude >= zScoreThresholdMagnitude) && (
           <div className="bg-red-600 text-white p-5 rounded-3xl flex items-center justify-between animate-pulse shadow-xl shadow-red-200 border-2 border-red-500">
             <div className="flex items-center gap-4 text-left">
               <Bell size={24} className="shrink-0" />
               <div className="text-left">
-                <p className="font-black text-lg uppercase leading-none">Gap Alert!</p>
-                <p className="text-sm font-bold opacity-90 mt-1">{currentGapMagnitude.toFixed(2)}% 격차 발생</p>
+                <p className="font-black text-lg uppercase leading-none text-left tracking-tighter">Market Volatility Alert!</p>
+                <p className="text-xs font-bold opacity-90 mt-1">
+                  {currentGapMagnitude >= thresholdMagnitude && `Gap: ${currentGapMagnitude.toFixed(2)}% `}
+                  {currentZScoreMagnitude >= zScoreThresholdMagnitude && `Z-Score: ${zScoreValue}`}
+                </p>
               </div>
             </div>
             <ChevronRight size={24} />
@@ -373,7 +382,7 @@ export default function App() {
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left font-sans">
                     <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter text-left">Statistical Edge</p>
                     <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                      Z-Score가 1.5를 넘어서는 구간은 역사적으로 드문 상황입니다. 이때는 추세 추종보다는 '평균 회귀' 전략이 더 유효할 수 있습니다.
+                      Z-Score가 <strong>2.0</strong>을 넘어서는 구간은 매우 희귀한 상황입니다. 이때는 비트코인과 알트코인의 가격 왜곡이 매우 심각한 상태일 수 있습니다.
                     </p>
                   </div>
                 </div>

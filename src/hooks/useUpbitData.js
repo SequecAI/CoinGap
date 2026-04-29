@@ -24,6 +24,8 @@ export function useUpbitData() {
   const [dominance, setDominance] = useState(52.5);
   const [ma20, setMa20] = useState(0);
   const [momentum5m, setMomentum5m] = useState(0);
+  const [candles5m, setCandles5m] = useState([]);
+  const [dayCandles, setDayCandles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
@@ -59,18 +61,20 @@ export function useUpbitData() {
       try {
         const [dayCandles, minCandles] = await Promise.all([
           safeFetch(`https://api.upbit.com/v1/candles/days?market=${selectedAlt}&count=20`),
-          safeFetch(`https://api.upbit.com/v1/candles/minutes/5?market=${selectedAlt}&count=1`)
+          safeFetch(`https://api.upbit.com/v1/candles/minutes/5?market=${selectedAlt}&count=12`)
         ]);
         if (isMounted) {
           if (dayCandles && dayCandles.length > 0) {
             const avg = dayCandles.reduce((acc, curr) => acc + curr.trade_price, 0) / dayCandles.length;
             setMa20(avg);
+            setDayCandles([...dayCandles].reverse());
           }
           if (minCandles && minCandles.length > 0) {
             const candle5m = minCandles[0];
             const currentPrice = tickers[selectedAlt]?.trade_price || candle5m.trade_price;
             const rate = ((currentPrice / candle5m.opening_price) - 1) * 100;
             setMomentum5m(rate);
+            setCandles5m([...minCandles].reverse());
           }
         }
       } catch (error) { }
@@ -111,6 +115,8 @@ export function useUpbitData() {
     dominance,
     ma20,
     momentum5m,
+    candles5m,
+    dayCandles,
     loading,
     lastUpdated
   };

@@ -4,8 +4,67 @@ import {
   Gauge,
   BarChart3,
   PieChart,
-  MoveUpRight
+  MoveUpRight,
+  Crosshair
 } from 'lucide-react';
+
+function DashboardSignalPanel({ momentum5m, zScoreValue }) {
+  // Z-Score: +3(Buy) -> 100, -3(Sell) -> 0
+  const zScoreMapped = Math.max(0, Math.min(100, 50 + zScoreValue * (50/3)));
+  
+  // Momentum: 하락 시 매수(역추세) + Z-score 결합
+  // AnalysisTab과 동일한 역추세 관점: 상승하면 매도압력 증가(점수 하락)
+  const momMapped = Math.max(0, Math.min(100, 50 - momentum5m * 10));
+  
+  const score = (zScoreMapped + momMapped) / 2;
+
+  const getLabel = (s) => {
+    if (s >= 70) return { text: 'Strong Buy', color: '#10b981', bg: 'bg-emerald-500/10', tc: 'text-emerald-500', bc: 'border-emerald-500/30' };
+    if (s >= 55) return { text: 'Buy', color: '#34d399', bg: 'bg-emerald-400/10', tc: 'text-emerald-400', bc: 'border-emerald-400/30' };
+    if (s <= 30) return { text: 'Strong Sell', color: '#ef4444', bg: 'bg-red-500/10', tc: 'text-red-500', bc: 'border-red-500/30' };
+    if (s <= 45) return { text: 'Sell', color: '#f87171', bg: 'bg-red-400/10', tc: 'text-red-400', bc: 'border-red-400/30' };
+    return { text: 'Neutral', color: '#94a3b8', bg: 'bg-slate-400/10', tc: 'text-slate-400', bc: 'border-slate-400/30' };
+  };
+  const label = getLabel(score);
+
+  return (
+    <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col col-span-1 md:col-span-2">
+      <div className="relative z-10 text-left font-sans flex-1">
+        <div className="flex items-center gap-2 mb-1">
+          <Crosshair size={16} className="text-violet-500" />
+          <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Dashboard Signal</h3>
+        </div>
+        <p className="text-xs text-slate-500 font-medium mb-3">
+          Price Momentum과 Gap Z-Score를 50:50으로 결합한 <span className="text-violet-600 font-bold">단기 트레이딩 신호</span>입니다.
+        </p>
+        
+        <div className="flex flex-col gap-3 w-full">
+          <div className="flex items-center gap-4">
+            <div className="flex items-baseline gap-1">
+              <span className="text-4xl font-black tabular-nums text-slate-900">{score.toFixed(0)}</span>
+              <span className="text-sm text-slate-400 font-bold tabular-nums">/ 100</span>
+            </div>
+            <div className={`px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-tighter ${label.bg} ${label.tc} ${label.bc}`}>
+              {label.text}
+            </div>
+          </div>
+
+          <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden relative">
+            <div className="absolute inset-0 flex">
+              <div className="w-[30%] bg-red-500"></div>
+              <div className="w-[15%] bg-orange-400"></div>
+              <div className="w-[10%] bg-slate-300"></div>
+              <div className="w-[15%] bg-emerald-400"></div>
+              <div className="w-[30%] bg-emerald-500"></div>
+            </div>
+            <div className="absolute top-0 h-full w-1.5 bg-slate-900 rounded-full transition-all duration-700 shadow-md border border-white"
+              style={{ left: `${score}%`, transform: 'translateX(-50%)' }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardTab({
   momentum5m,
@@ -24,6 +83,7 @@ export default function DashboardTab({
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <DashboardSignalPanel momentum5m={momentum5m} zScoreValue={zScoreValue} />
         {/* 1. Price Momentum (5분 기준) */}
         <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
           <div className="relative z-10 text-left font-sans">

@@ -11,6 +11,7 @@ import {
 import { Analytics } from '@vercel/analytics/react';
 import { useUpbitData } from './hooks/useUpbitData';
 import DashboardTab from './tabs/DashboardTab';
+import AnalysisTab from './tabs/AnalysisTab';
 
 export default function App() {
   const {
@@ -21,6 +22,8 @@ export default function App() {
     dominance,
     ma20,
     momentum5m,
+    candles5m,
+    dayCandles,
     loading,
     lastUpdated
   } = useUpbitData();
@@ -116,13 +119,13 @@ export default function App() {
             onClick={() => setActiveTab('dashboard')}
             className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'dashboard' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
           >
-            Dashboard
+            Divergence
           </button>
           <button
             onClick={() => setActiveTab('analysis')}
             className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'analysis' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
           >
-            Analysis
+            Statistics
           </button>
           <button
             onClick={() => setActiveTab('multi')}
@@ -151,9 +154,15 @@ export default function App() {
         )}
         
         {activeTab === 'analysis' && (
-          <div className="bg-white p-12 rounded-[2.5rem] border border-slate-100 shadow-sm text-center">
-            <p className="text-slate-500 font-bold">Analysis 뷰 준비중...</p>
-          </div>
+          <AnalysisTab
+            candles5m={candles5m}
+            dayCandles={dayCandles}
+            btcRate={btcRate}
+            altRate={altRate}
+            altName={altName}
+            alt={alt}
+            momentum5m={momentum5m}
+          />
         )}
 
         {activeTab === 'multi' && (

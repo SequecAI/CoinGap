@@ -19,7 +19,7 @@ export const safeFetch = async (url) => {
 
 export function useUpbitData() {
   const [markets, setMarkets] = useState([]);
-  const [selectedAlt, setSelectedAlt] = useState(TARGET_ALTS[0]);
+  const [selectedAlt, setSelectedAlt] = useState(TARGET_ALTS[1]);
   const [tickers, setTickers] = useState({});
   const [dominance, setDominance] = useState(52.5);
   const [ma20, setMa20] = useState(0);

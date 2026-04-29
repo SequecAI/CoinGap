@@ -1,4 +1,5 @@
 import React from 'react';
+import CoinPricePanel from '../components/CoinPricePanel';
 import {
   Zap,
   Gauge,
@@ -28,7 +29,7 @@ function DashboardSignalPanel({ momentum5m, zScoreValue }) {
   const label = getLabel(score);
 
   return (
-    <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col col-span-1 md:col-span-2">
+    <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col col-span-1">
       <div className="relative z-10 text-left font-sans flex-1">
         <div className="flex items-center gap-2 mb-1">
           <Crosshair size={16} className="text-violet-500" />
@@ -83,7 +84,10 @@ export default function DashboardTab({
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <DashboardSignalPanel momentum5m={momentum5m} zScoreValue={zScoreValue} />
+        <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <DashboardSignalPanel momentum5m={momentum5m} zScoreValue={zScoreValue} />
+          <CoinPricePanel coin={alt} coinName={altName} coinVol={altVol} />
+        </div>
         {/* 1. Price Momentum (5분 기준) */}
         <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group border border-white/5">
           <div className="relative z-10 text-left font-sans">
@@ -201,29 +205,7 @@ export default function DashboardTab({
         </div>
       </div>
 
-      {/* 상세 가격 정보 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left font-sans">
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-left">
-          <p className="text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest font-sans">Bitcoin (BTC)</p>
-          <p className="text-3xl font-black mb-1 tracking-tight tabular-nums font-sans">{btc?.trade_price.toLocaleString()} KRW</p>
-          <div className="flex items-center justify-between font-sans">
-            <div className={`flex items-center gap-1 font-bold ${btc?.change === 'RISE' ? 'text-red-500' : 'text-blue-500'}`}>
-              <span>{(btc?.signed_change_rate * 100).toFixed(2)}%</span>
-            </div>
-            <span className="text-[10px] text-slate-400 font-bold tabular-nums font-sans">Vol: {(btcVol / 100000000).toLocaleString(undefined, { maximumFractionDigits: 0 })}억</span>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-left">
-          <p className="text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest font-sans">{altName}</p>
-          <p className="text-3xl font-black mb-1 tracking-tight tabular-nums font-sans">{alt?.trade_price.toLocaleString()} KRW</p>
-          <div className="flex items-center justify-between font-sans">
-            <div className={`flex items-center gap-1 font-bold ${alt?.change === 'RISE' ? 'text-red-500' : 'text-blue-500'}`}>
-              <span>{(alt?.signed_change_rate * 100).toFixed(2)}%</span>
-            </div>
-            <span className="text-[10px] text-slate-400 font-bold tabular-nums font-sans">Vol: {(altVol / 100000000).toLocaleString(undefined, { maximumFractionDigits: 0 })}억</span>
-          </div>
-        </div>
-      </div>
+
     </>
   );
 }

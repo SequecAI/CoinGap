@@ -1,5 +1,6 @@
 import React from 'react';
 import { Zap, Activity, Gauge, Shield, Crosshair, TrendingUp } from 'lucide-react';
+import CoinPricePanel from '../components/CoinPricePanel';
 
 // ── SVG 바 차트 컴포넌트 ──
 export function VolumeBarChart({ candles }) {
@@ -540,6 +541,7 @@ export default function AnalysisTab({
   altRate,
   altName,
   alt,
+  altVol,
   momentum5m
 }) {
   const displayCandles5m = candles5m ? candles5m.slice(-12) : [];
@@ -551,18 +553,21 @@ export default function AnalysisTab({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
 
-      {/* 1. 종합 시그널 (전체 너비) */}
-      <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col col-span-1 md:col-span-2">
-        <div className="relative z-10 text-left font-sans flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <Crosshair size={16} className="text-violet-500" />
-            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Signal Score</h3>
+      {/* 1. 상단 점수판 + 코인 가격 */}
+      <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col col-span-1">
+          <div className="relative z-10 text-left font-sans flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Crosshair size={16} className="text-violet-500" />
+              <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Signal Score</h3>
+            </div>
+            <p className="text-xs text-slate-500 font-medium mb-3">
+              RSI, 볼린저, 모멘텀, 체결강도를 종합한 <span className="text-violet-600 font-bold">매수/매도 신호</span>입니다.
+            </p>
+            <SignalScorePanel score={signal.score} />
           </div>
-          <p className="text-xs text-slate-500 font-medium mb-3">
-            RSI, 볼린저, 모멘텀, 체결강도를 종합한 <span className="text-violet-600 font-bold">매수/매도 신호</span>입니다.
-          </p>
-          <SignalScorePanel score={signal.score} />
         </div>
+        <CoinPricePanel coin={alt} coinName={altName} coinVol={altVol} />
       </div>
 
       {/* 2. 볼린저 밴드 (좌상단) */}

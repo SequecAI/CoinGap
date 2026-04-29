@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export const TARGET_ALTS = ['KRW-BTC', 'KRW-ETH', 'KRW-XRP', 'KRW-TRX', 'KRW-SOL', 'KRW-DOGE'];
+export const TARGET_ALTS = ['KRW-BTC', 'KRW-ETH', 'KRW-XRP', 'KRW-TRX', 'KRW-SOL', 'KRW-DOGE', 'KRW-ADA', 'KRW-SHIB', 'KRW-ORCA', 'KRW-BLEND'];
 
 export const safeFetch = async (url) => {
   const proxies = ['', 'https://api.codetabs.com/v1/proxy?quest=', 'https://corsproxy.io/?'];

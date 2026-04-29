@@ -176,6 +176,7 @@ export default function App() {
             altRate={altRate}
             altName={altName}
             alt={alt}
+            altVol={altVol}
             momentum5m={momentum5m}
           />
         )}
@@ -185,6 +186,8 @@ export default function App() {
             candles5m={candles5m}
             dayCandles={dayCandles}
             altName={altName}
+            alt={alt}
+            altVol={altVol}
             momentum5m={momentum5m}
             zScoreValue={zScoreValue}
           />

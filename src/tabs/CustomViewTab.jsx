@@ -1,6 +1,7 @@
 import React from 'react';
 import { Settings, Crosshair, BarChart2, Shield, Zap, Gauge, Activity, TrendingUp } from 'lucide-react';
 import { useCustomSettings } from '../hooks/useCustomSettings';
+import CoinPricePanel from '../components/CoinPricePanel';
 import {
   TradeIntensityGauge,
   RSIGauge,
@@ -125,6 +126,8 @@ export default function CustomViewTab({
   candles5m,
   dayCandles,
   altName,
+  alt,
+  altVol,
   momentum5m,
   zScoreValue
 }) {
@@ -222,41 +225,44 @@ export default function CustomViewTab({
 
   return (
     <div className="space-y-4">
-      {/* 1. Custom Signal Score Panel */}
-      <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
-        <div className="relative z-10 text-left font-sans flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <Crosshair size={16} className="text-violet-500" />
-            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Custom Signal</h3>
-          </div>
-          <p className="text-xs text-slate-500 font-medium mb-3">
-            사용자가 직접 구성한 지표 조합을 바탕으로 계산된 <span className="text-violet-600 font-bold">커스텀 매수/매도 시그널</span>입니다.
-          </p>
-          
-          <div className="flex flex-col gap-3 w-full">
-            <div className="flex items-center gap-4">
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-black tabular-nums text-slate-900">{finalScore.toFixed(0)}</span>
-                <span className="text-sm text-slate-400 font-bold tabular-nums">/ 100</span>
-              </div>
-              <div className={`px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-tighter ${label.bg} ${label.tc} ${label.bc}`}>
-                {label.text}
-              </div>
+      {/* 1. 상단 점수판 + 코인 가격 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
+          <div className="relative z-10 text-left font-sans flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Crosshair size={16} className="text-violet-500" />
+              <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Custom Signal</h3>
             </div>
-
-            <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden relative">
-              <div className="absolute inset-0 flex">
-                <div className="w-[30%] bg-red-500"></div>
-                <div className="w-[15%] bg-orange-400"></div>
-                <div className="w-[10%] bg-slate-300"></div>
-                <div className="w-[15%] bg-emerald-400"></div>
-                <div className="w-[30%] bg-emerald-500"></div>
+            <p className="text-xs text-slate-500 font-medium mb-3">
+              사용자가 직접 구성한 지표 조합을 바탕으로 계산된 <span className="text-violet-600 font-bold">커스텀 매수/매도 시그널</span>입니다.
+            </p>
+            
+            <div className="flex flex-col gap-3 w-full">
+              <div className="flex items-center gap-4">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-black tabular-nums text-slate-900">{finalScore.toFixed(0)}</span>
+                  <span className="text-sm text-slate-400 font-bold tabular-nums">/ 100</span>
+                </div>
+                <div className={`px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-tighter ${label.bg} ${label.tc} ${label.bc}`}>
+                  {label.text}
+                </div>
               </div>
-              <div className="absolute top-0 h-full w-1.5 bg-slate-900 rounded-full transition-all duration-700 shadow-md border border-white"
-                style={{ left: `${finalScore}%`, transform: 'translateX(-50%)' }} />
+
+              <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden relative">
+                <div className="absolute inset-0 flex">
+                  <div className="w-[30%] bg-red-500"></div>
+                  <div className="w-[15%] bg-orange-400"></div>
+                  <div className="w-[10%] bg-slate-300"></div>
+                  <div className="w-[15%] bg-emerald-400"></div>
+                  <div className="w-[30%] bg-emerald-500"></div>
+                </div>
+                <div className="absolute top-0 h-full w-1.5 bg-slate-900 rounded-full transition-all duration-700 shadow-md border border-white"
+                  style={{ left: `${finalScore}%`, transform: 'translateX(-50%)' }} />
+              </div>
             </div>
           </div>
         </div>
+        <CoinPricePanel coin={alt} coinName={altName} coinVol={altVol} />
       </div>
 
       {/* 2. 지표 설정 토글 패널 */}

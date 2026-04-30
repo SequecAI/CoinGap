@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Activity,
   Bell,
@@ -6,13 +6,18 @@ import {
   ChevronRight,
   ShieldCheck,
   BookOpen,
-  RefreshCcw
+  RefreshCcw,
+  Search,
+  X
 } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 import { useUpbitData } from './hooks/useUpbitData';
+import { useStockData, DEFAULT_STOCKS } from './hooks/useStockData';
 import DashboardTab from './tabs/DashboardTab';
 import AnalysisTab from './tabs/AnalysisTab';
 import CustomViewTab from './tabs/CustomViewTab';
+import StockAnalysisTab from './tabs/StockAnalysisTab';
+import StockCustomViewTab from './tabs/StockCustomViewTab';
 
 export default function App() {
   const {
@@ -29,12 +34,46 @@ export default function App() {
     lastUpdated
   } = useUpbitData();
 
+  const stockData = useStockData();
+
   const [dropThreshold, setDropThreshold] = useState(2.0);
   const [zScoreThreshold, setZScoreThreshold] = useState(3.0);
   const [showInfo, setShowInfo] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard'); // 탭 상태 추가
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('coinGap_activeTab') || 'dashboard');
+  const [appMode, setAppMode] = useState(() => localStorage.getItem('coinGap_appMode') || 'crypto');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const searchRef = useRef(null);
 
-  if (loading) return (
+  // 검색 외부 클릭 시 닫기
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowSearch(false);
+        stockData.clearSearch();
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // 로컬스토리지 저장
+  useEffect(() => {
+    localStorage.setItem('coinGap_activeTab', activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    localStorage.setItem('coinGap_appMode', appMode);
+  }, [appMode]);
+
+  // 모드 전환 시 탭 리셋
+  const handleModeSwitch = (mode) => {
+    setAppMode(mode);
+    setActiveTab(mode === 'stock' ? 'analysis' : 'dashboard');
+  };
+
+  const isLoading = appMode === 'crypto' ? loading : stockData.loading;
+  if (isLoading) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans font-medium text-slate-400">
       <div className="flex flex-col items-center gap-4 text-slate-500">
         <RefreshCcw className="animate-spin" size={32} />
@@ -85,57 +124,111 @@ export default function App() {
         {/* 상단 헤더 */}
         <div className="flex flex-col md:flex-row md:items-center justify-between bg-white p-6 rounded-2xl shadow-sm border border-slate-100 gap-4">
           <div className="flex items-center gap-4 text-left font-sans">
-            <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-100">
+            <div className={`p-3 ${appMode === 'crypto' ? 'bg-blue-600' : 'bg-emerald-600'} text-white rounded-2xl shadow-lg ${appMode === 'crypto' ? 'shadow-blue-100' : 'shadow-emerald-100'}`}>
               <Activity size={28} />
             </div>
             <div className="text-left font-sans">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none font-sans">코인 갭 모니터</h1>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none font-sans">
+                {appMode === 'crypto' ? '코인 갭 모니터' : '국내주식 모니터'}
+              </h1>
               <div className="flex items-center gap-2 text-slate-400 mt-1">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                 </span>
-                <p className="text-[10px] font-bold uppercase tracking-wider">{lastUpdated.toLocaleTimeString()} 업데이트</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider">
+                  {(appMode === 'crypto' ? lastUpdated : stockData.lastUpdated).toLocaleTimeString()} 업데이트
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 font-sans text-left">
-            <div className="flex flex-col gap-1 text-left">
-              <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">DROP ALERT</label>
-              <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums text-left" value={dropThreshold} onChange={(e) => setDropThreshold(Number(e.target.value))} />
-            </div>
-            <div className="flex flex-col gap-1 text-left">
-              <label className="text-[10px] font-black text-orange-400 px-1 uppercase tracking-tighter">Z-Score Alert</label>
-              <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-orange-500 transition-all tabular-nums text-left" value={zScoreThreshold} onChange={(e) => setZScoreThreshold(Number(e.target.value))} />
-            </div>
-            <div className="flex flex-col gap-1 text-left">
-              <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter">Compare</label>
-              <select className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-40 font-bold outline-none cursor-pointer focus:ring-2 focus:ring-blue-500 transition-all text-left font-sans" value={selectedAlt} onChange={(e) => setSelectedAlt(e.target.value)}>
-                {markets.map((m) => (<option key={m.market} value={m.market}>{getDisplayName(m)}</option>))}
-              </select>
+          <div className="flex flex-col sm:flex-row gap-4 font-sans text-left items-end">
+            {appMode === 'crypto' ? (
+              <>
+                <div className="flex flex-col gap-1 text-left">
+                  <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">DROP ALERT</label>
+                  <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums text-left" value={dropThreshold} onChange={(e) => setDropThreshold(Number(e.target.value))} />
+                </div>
+                <div className="flex flex-col gap-1 text-left">
+                  <label className="text-[10px] font-black text-orange-400 px-1 uppercase tracking-tighter">Z-Score Alert</label>
+                  <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-orange-500 transition-all tabular-nums text-left" value={zScoreThreshold} onChange={(e) => setZScoreThreshold(Number(e.target.value))} />
+                </div>
+                <div className="flex flex-col gap-1 text-left">
+                  <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter">Compare</label>
+                  <select className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-40 font-bold outline-none cursor-pointer focus:ring-2 focus:ring-blue-500 transition-all text-left font-sans" value={selectedAlt} onChange={(e) => setSelectedAlt(e.target.value)}>
+                    {markets.map((m) => (<option key={m.market} value={m.market}>{getDisplayName(m)}</option>))}
+                  </select>
+                </div>
+              </>
+            ) : (
+              <div className="relative" ref={searchRef}>
+                <div className="flex flex-col gap-1 text-left">
+                  <label className="text-[10px] font-black text-emerald-500 px-1 uppercase tracking-tighter">종목 검색</label>
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input type="text" placeholder="종목명 또는 코드" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 pl-8 pr-8 w-full sm:w-52 font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-left font-sans text-sm"
+                      value={searchQuery}
+                      onChange={(e) => { setSearchQuery(e.target.value); stockData.searchStock(e.target.value); setShowSearch(true); }}
+                      onFocus={() => setShowSearch(true)} />
+                    {searchQuery && (
+                      <button onClick={() => { setSearchQuery(''); stockData.clearSearch(); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {/* 검색 결과 드롭다운 */}
+                {showSearch && stockData.searchResults.length > 0 && (
+                  <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                    {stockData.searchResults.map((item) => (
+                      <button key={item.code} className="w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors flex items-center justify-between border-b border-slate-50 last:border-0"
+                        onClick={() => {
+                          stockData.setSelectedStock({ code: item.code, name: item.name, market: item.typeCode });
+                          setSearchQuery('');
+                          setShowSearch(false);
+                          stockData.clearSearch();
+                        }}>
+                        <div>
+                          <p className="font-bold text-sm text-slate-900">{item.name}</p>
+                          <p className="text-[10px] text-slate-400 font-bold">{item.code}</p>
+                        </div>
+                        <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">{item.typeName}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 모드 토글 (우측 고정) */}
+            <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+              <button onClick={() => handleModeSwitch('crypto')}
+                className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'crypto' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                ₿ 코인
+              </button>
+              <button onClick={() => handleModeSwitch('stock')}
+                className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'stock' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                🇰🇷 주식
+              </button>
             </div>
           </div>
         </div>
 
-        {/* 탭 내비게이션 추가 */}
+        {/* 탭 내비게이션 */}
         <div className="flex gap-2 bg-slate-200/50 p-1.5 rounded-2xl">
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'dashboard' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
-          >
-            Divergence
-          </button>
-          <button
-            onClick={() => setActiveTab('analysis')}
-            className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'analysis' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
-          >
+          {appMode === 'crypto' && (
+            <button onClick={() => setActiveTab('dashboard')}
+              className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'dashboard' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
+              Divergence
+            </button>
+          )}
+          <button onClick={() => setActiveTab('analysis')}
+            className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'analysis' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
             Statistics
           </button>
-          <button
-            onClick={() => setActiveTab('custom')}
-            className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'custom' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
-          >
+          <button onClick={() => setActiveTab('custom')}
+            className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'custom' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
             Custom View
           </button>
         </div>
@@ -168,7 +261,7 @@ export default function App() {
           )
         )}
         
-        {activeTab === 'analysis' && (
+        {activeTab === 'analysis' && appMode === 'crypto' && (
           <AnalysisTab
             candles5m={candles5m}
             dayCandles={dayCandles}
@@ -181,7 +274,27 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'custom' && (
+        {activeTab === 'analysis' && appMode === 'stock' && (
+          <StockAnalysisTab
+            dayCandles={stockData.dayCandles}
+            momentum={stockData.momentum}
+            stockName={stockData.selectedStock.name}
+            currentPrice={stockData.currentPrice}
+            changeRate={stockData.changeRate}
+            changeDirection={stockData.changeDirection}
+            marketCap={stockData.marketCap}
+            volume={stockData.volume}
+            per={stockData.per} pbr={stockData.pbr} eps={stockData.eps} bps={stockData.bps}
+            dividendYield={stockData.dividendYield}
+            foreignRate={stockData.foreignRate}
+            high52w={stockData.high52w} low52w={stockData.low52w}
+            dealTrends={stockData.dealTrends}
+            kospiPrice={stockData.kospiPrice} kospiChange={stockData.kospiChange} kospiDirection={stockData.kospiDirection}
+            kosdaqPrice={stockData.kosdaqPrice} kosdaqChange={stockData.kosdaqChange} kosdaqDirection={stockData.kosdaqDirection}
+          />
+        )}
+
+        {activeTab === 'custom' && appMode === 'crypto' && (
           <CustomViewTab
             candles5m={candles5m}
             dayCandles={dayCandles}
@@ -193,8 +306,27 @@ export default function App() {
           />
         )}
 
-        {/* 알림 메시지 (두 줄 구성 및 명칭 통일) - 탭과 무관하게 상시 표시 */}
-        {(currentDropMagnitude >= dropThreshold || currentZScoreMagnitude >= zScoreThreshold) && (
+        {activeTab === 'custom' && appMode === 'stock' && (
+          <StockCustomViewTab
+            dayCandles={stockData.dayCandles}
+            momentum={stockData.momentum}
+            stockName={stockData.selectedStock.name}
+            currentPrice={stockData.currentPrice}
+            changeRate={stockData.changeRate}
+            changeDirection={stockData.changeDirection}
+            marketCap={stockData.marketCap}
+            per={stockData.per} pbr={stockData.pbr} eps={stockData.eps} bps={stockData.bps}
+            dividendYield={stockData.dividendYield}
+            foreignRate={stockData.foreignRate}
+            high52w={stockData.high52w} low52w={stockData.low52w}
+            dealTrends={stockData.dealTrends}
+            kospiPrice={stockData.kospiPrice} kospiChange={stockData.kospiChange} kospiDirection={stockData.kospiDirection}
+            kosdaqPrice={stockData.kosdaqPrice} kosdaqChange={stockData.kosdaqChange} kosdaqDirection={stockData.kosdaqDirection}
+          />
+        )}
+
+        {/* 알림 메시지 - 코인 모드에서만 표시 */}
+        {appMode === 'crypto' && (currentDropMagnitude >= dropThreshold || currentZScoreMagnitude >= zScoreThreshold) && (
           <div className="bg-red-600 text-white p-5 rounded-3xl flex items-center justify-between animate-pulse shadow-xl shadow-red-200 border-2 border-red-500 font-sans">
             <div className="flex items-center gap-4 text-left">
               <Bell size={24} className="shrink-0" />

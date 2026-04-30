@@ -273,81 +273,19 @@ export default function CustomViewTab({
         </div>
         <div className="flex flex-wrap gap-2">
           <ToggleButton active={indicators.bollinger} onClick={() => toggleIndicator('bollinger')} label="Bollinger Bands" />
-          <ToggleButton active={indicators.momentum} onClick={() => toggleIndicator('momentum')} label="Momentum" />
-          <ToggleButton active={indicators.intensity} onClick={() => toggleIndicator('intensity')} label="Trade Intensity" />
-          <ToggleButton active={indicators.rsi} onClick={() => toggleIndicator('rsi')} label="RSI" />
-          <ToggleButton active={indicators.zscore} onClick={() => toggleIndicator('zscore')} label="Gap Z-Score" />
-          <ToggleButton active={indicators.macd} onClick={() => toggleIndicator('macd')} label="MACD" />
-          <ToggleButton active={indicators.mfi} onClick={() => toggleIndicator('mfi')} label="MFI" />
+          <ToggleButton active={indicators.momentum} onClick={() => toggleIndicator('momentum')} label="Momentum Trail" />
+          <ToggleButton active={indicators.rsi} onClick={() => toggleIndicator('rsi')} label="RSI-14" />
           <ToggleButton active={indicators.stochrsi} onClick={() => toggleIndicator('stochrsi')} label="Stoch RSI" />
+          <ToggleButton active={indicators.mfi} onClick={() => toggleIndicator('mfi')} label="MFI-14" />
+          <ToggleButton active={indicators.intensity} onClick={() => toggleIndicator('intensity')} label="Trade Intensity" />
+          <ToggleButton active={indicators.zscore} onClick={() => toggleIndicator('zscore')} label="Gap Z-Score" />
+          <ToggleButton active={indicators.macd} onClick={() => toggleIndicator('macd')} label="MACD (12,26,9)" />
         </div>
       </div>
 
       {/* 3. 선택된 지표 렌더링 그리드 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
         
-        {indicators.macd && macd && (
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
-            <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingUp size={16} className="text-indigo-500" />
-                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">MACD (12,26,9)</h3>
-              </div>
-              <p className="text-xs text-slate-500 font-medium mb-3">
-                단기 이평선과 장기 이평선의 수렴/확산을 통한 추세 지표입니다.
-              </p>
-              <div className="mt-auto flex flex-col gap-2">
-                <div className="flex justify-between items-center border-b pb-1">
-                  <span className="text-xs text-slate-400 font-bold">MACD</span>
-                  <span className={`text-sm font-black tabular-nums ${macd.macd >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{macd.macd.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center border-b pb-1">
-                  <span className="text-xs text-slate-400 font-bold">Signal</span>
-                  <span className="text-sm font-black tabular-nums text-slate-600">{macd.signal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-slate-400 font-bold">Histogram</span>
-                  <span className={`text-sm font-black tabular-nums ${macd.hist >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{macd.hist.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {indicators.mfi && mfi !== null && (
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
-            <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
-              <div className="flex items-center gap-2 mb-1">
-                <Activity size={16} className="text-fuchsia-500" />
-                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">MFI-14</h3>
-              </div>
-              <p className="text-xs text-slate-500 font-medium mb-2">
-                거래량이 실린 돈의 흐름(자금 유입)을 보여주는 지표입니다.
-              </p>
-              <div className="mt-auto">
-                <RSIGauge rsi={mfi} /> {/* MFI도 0-100이므로 RSIGauge 재사용 */}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {indicators.stochrsi && stochRsi !== null && (
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
-            <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
-              <div className="flex items-center gap-2 mb-1">
-                <Zap size={16} className="text-blue-500" />
-                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Stoch RSI</h3>
-              </div>
-              <p className="text-xs text-slate-500 font-medium mb-2">
-                RSI의 민감도를 극대화하여 단기 과매수/과매도를 추적합니다.
-              </p>
-              <div className="mt-auto">
-                <RSIGauge rsi={stochRsi} /> {/* StochRSI도 0-100 */}
-              </div>
-            </div>
-          </div>
-        )}
-
         {indicators.bollinger && (
           <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
             <div className="relative z-10 text-left font-sans flex-1">
@@ -384,23 +322,6 @@ export default function CustomViewTab({
           </div>
         )}
 
-        {indicators.intensity && (
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
-            <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
-              <div className="flex items-center gap-2 mb-1">
-                <Zap size={16} className="text-amber-500" />
-                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Trade Intensity</h3>
-              </div>
-              <p className="text-xs text-slate-500 font-medium mb-3">
-                최근 12개 5분봉 매수/매도 압력.
-              </p>
-              <div className="mt-auto">
-                <TradeIntensityGauge candles={displayCandles5m} />
-              </div>
-            </div>
-          </div>
-        )}
-
         {indicators.rsi && (
           <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
             <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
@@ -413,6 +334,57 @@ export default function CustomViewTab({
               </p>
               <div className="mt-auto">
                 <RSIGauge rsi={rsi} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {indicators.stochrsi && stochRsi !== null && (
+          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
+            <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                <Zap size={16} className="text-blue-500" />
+                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Stoch RSI</h3>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mb-2">
+                RSI의 민감도를 극대화하여 단기 과매수/과매도를 추적합니다.
+              </p>
+              <div className="mt-auto">
+                <RSIGauge rsi={stochRsi} /> {/* StochRSI도 0-100 */}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {indicators.mfi && mfi !== null && (
+          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
+            <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                <Activity size={16} className="text-fuchsia-500" />
+                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">MFI-14</h3>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mb-2">
+                거래량이 실린 돈의 흐름(자금 유입)을 보여주는 지표입니다.
+              </p>
+              <div className="mt-auto">
+                <RSIGauge rsi={mfi} /> {/* MFI도 0-100이므로 RSIGauge 재사용 */}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {indicators.intensity && (
+          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
+            <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                <Zap size={16} className="text-amber-500" />
+                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Trade Intensity</h3>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mb-3">
+                최근 12개 5분봉 매수/매도 압력.
+              </p>
+              <div className="mt-auto">
+                <TradeIntensityGauge candles={displayCandles5m} />
               </div>
             </div>
           </div>
@@ -432,6 +404,34 @@ export default function CustomViewTab({
                 <span className={`text-6xl font-black tracking-tighter tabular-nums ${getZScoreColor(zScoreValue)}`}>
                   {zScoreValue > 0 ? '+' : ''}{zScoreValue}
                 </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {indicators.macd && macd && (
+          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
+            <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                <TrendingUp size={16} className="text-indigo-500" />
+                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">MACD (12,26,9)</h3>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mb-3">
+                단기 이평선과 장기 이평선의 수렴/확산을 통한 추세 지표입니다.
+              </p>
+              <div className="mt-auto flex flex-col gap-2">
+                <div className="flex justify-between items-center border-b pb-1">
+                  <span className="text-xs text-slate-400 font-bold">MACD</span>
+                  <span className={`text-sm font-black tabular-nums ${macd.macd >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{macd.macd.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center border-b pb-1">
+                  <span className="text-xs text-slate-400 font-bold">Signal</span>
+                  <span className="text-sm font-black tabular-nums text-slate-600">{macd.signal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-400 font-bold">Histogram</span>
+                  <span className={`text-sm font-black tabular-nums ${macd.hist >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{macd.hist.toFixed(2)}</span>
+                </div>
               </div>
             </div>
           </div>

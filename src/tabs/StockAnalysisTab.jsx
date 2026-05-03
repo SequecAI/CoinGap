@@ -362,35 +362,33 @@ export default function StockAnalysisTab({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
 
-      {/* 1. 상단 고정 패널: 2열 2행 (시그널/현재가 + 지수) */}
-      <div className="col-span-1 md:col-span-2 flex flex-col gap-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* 시그널 점수 */}
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col col-span-1">
-            <div className="relative z-10 text-left font-sans flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <Crosshair size={16} className="text-violet-500" />
-                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Signal</h3>
-              </div>
-              <p className="text-xs text-slate-500 font-medium mb-3">
-                RSI, 볼린저, 일봉 모멘텀 기반 <span className="text-violet-600 font-bold">매수/매도 신호</span>
-              </p>
-              <SignalScorePanel score={signal.score} />
+      {/* 1. 상단 고정 패널: 시그널/현재가 */}
+      <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 시그널 점수 */}
+        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
+          <div className="relative z-10 text-left font-sans flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Crosshair size={16} className="text-violet-500" />
+              <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Signal</h3>
             </div>
+            <p className="text-xs text-slate-500 font-medium mb-3">
+              RSI, 볼린저, 5분 모멘텀 기반 <span className="text-violet-600 font-bold">매수/매도 신호</span>
+            </p>
+            <SignalScorePanel score={signal.score} />
           </div>
-          {/* 현재가 */}
-          <StockPricePanel stockName={stockName} currentPrice={currentPrice} changeRate={changeRate}
-            changeDirection={changeDirection} marketCap={marketCap} volume={volume} />
         </div>
-        
-        {/* KOSPI, KOSDAQ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <IndexMiniCard name="KOSPI" price={kospiPrice} change={kospiChange} direction={kospiDirection} />
-          <IndexMiniCard name="KOSDAQ" price={kosdaqPrice} change={kosdaqChange} direction={kosdaqDirection} />
-        </div>
+        {/* 현재가 */}
+        <StockPricePanel stockName={stockName} currentPrice={currentPrice} changeRate={changeRate}
+          changeDirection={changeDirection} marketCap={marketCap} volume={volume} />
       </div>
 
-      {/* 2. 볼린저 밴드 */}
+      {/* 2. 지수 패널 (KOSPI/KOSDAQ) */}
+      <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <IndexMiniCard name="KOSPI" price={kospiPrice} change={kospiChange} direction={kospiDirection} />
+        <IndexMiniCard name="KOSDAQ" price={kosdaqPrice} change={kosdaqChange} direction={kosdaqDirection} />
+      </div>
+
+      {/* 3. Bollinger Bands & Price Chart (2행) */}
       <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
         <div className="relative z-10 text-left font-sans flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -407,7 +405,6 @@ export default function StockAnalysisTab({
         <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-emerald-600/10 rounded-full blur-[60px]"></div>
       </div>
 
-      {/* 3. 일봉 차트 */}
       <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
         <div className="relative z-10 text-left font-sans flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -424,7 +421,46 @@ export default function StockAnalysisTab({
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-cyan-400/5 rounded-full blur-[60px]"></div>
       </div>
 
-      {/* 4. Trade Intensity (Valuation 기존 위치) */}
+      {/* 4. Price Momentum & Z-Score (3행) */}
+      <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
+        <div className="relative z-10 text-left font-sans flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <Zap size={16} className="text-yellow-400" />
+            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Price Momentum</h3>
+          </div>
+          <div className="flex items-baseline gap-3 mb-4">
+            <span className={`text-5xl font-black tracking-tighter tabular-nums ${momentum >= 0 ? 'text-white' : 'text-blue-400'}`}>
+              {momentum.toFixed(2)}%
+            </span>
+            <div className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${momentum >= 0 ? 'bg-red-500/10 text-red-400 border-red-500/30' : 'bg-blue-500/10 text-blue-400 border-blue-500/30'}`}>
+              {momentum >= 0 ? 'UP' : 'DOWN'}
+            </div>
+          </div>
+          <p className="text-xs text-slate-400 font-medium leading-relaxed border-t border-white/10 pt-4 font-sans">
+            {stockName}의 <span className="text-blue-400 font-bold">최근 5분 가격 변동률</span>입니다. 시장의 즉각적인 에너지와 단기 방향성을 포착합니다.
+          </p>
+        </div>
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-yellow-400/5 rounded-full blur-[60px]"></div>
+      </div>
+
+      <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
+        <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
+          <div className="flex items-center gap-2 mb-1">
+            <Gauge size={16} className="text-orange-500" />
+            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Z-Score</h3>
+          </div>
+          <p className="text-xs text-slate-500 font-medium mb-3">
+            20일 평균선(MA20) 대비 <span className="text-orange-500 font-bold">표준편차(σ) 괴리도</span>입니다. +2.0↑ 과매수, -2.0↓ 과매도입니다.
+          </p>
+          <div className="my-auto flex items-center justify-center">
+            <span className={`text-6xl font-black tracking-tighter tabular-nums ${getZScoreColor(zScoreValue)}`}>
+              {zScoreValue > 0 ? '+' : ''}{zScoreValue}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Trade Intensity & RSI-14 */}
       <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
         <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
           <div className="flex items-center gap-2 mb-1">
@@ -440,7 +476,6 @@ export default function StockAnalysisTab({
         </div>
       </div>
 
-      {/* 5. RSI-14 */}
       <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
         <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
           <div className="flex items-center gap-2 mb-1">
@@ -456,7 +491,7 @@ export default function StockAnalysisTab({
         </div>
       </div>
 
-      {/* 6. Valuation (52W Range 기존 위치) */}
+      {/* 6. Valuation & Investor Flow */}
       <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
         <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
           <div className="flex items-center gap-2 mb-1">
@@ -473,7 +508,6 @@ export default function StockAnalysisTab({
         </div>
       </div>
 
-      {/* 8. 투자자 매매동향 */}
       <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
         <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
           <div className="flex items-center gap-2 mb-1">
@@ -489,7 +523,7 @@ export default function StockAnalysisTab({
         </div>
       </div>
 
-      {/* 9. 52주 고저 (최하단으로 이동) */}
+      {/* 7. 52W Range */}
       <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
         <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
           <div className="flex items-center gap-2 mb-1">
@@ -501,24 +535,6 @@ export default function StockAnalysisTab({
           </p>
           <div className="mt-auto">
             <Week52Bar currentPrice={currentPrice} high52w={high52w} low52w={low52w} />
-          </div>
-        </div>
-      </div>
-
-      {/* 7. Z-Score (신규 추가) */}
-      <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
-        <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
-          <div className="flex items-center gap-2 mb-1">
-            <Gauge size={16} className="text-orange-500" />
-            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Z-Score</h3>
-          </div>
-          <p className="text-xs text-slate-500 font-medium mb-3">
-            20일 평균선(MA20) 대비 <span className="text-orange-500 font-bold">표준편차(σ) 괴리도</span>입니다. +2.0 초과 시 과매수, -2.0 미만 시 과매도 신호입니다.
-          </p>
-          <div className="my-auto flex items-center justify-center gap-3">
-            <span className={`text-6xl font-black tracking-tighter tabular-nums ${getZScoreColor(zScoreValue)}`}>
-              {zScoreValue > 0 ? '+' : ''}{zScoreValue}
-            </span>
           </div>
         </div>
       </div>

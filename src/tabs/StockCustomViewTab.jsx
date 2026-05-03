@@ -248,7 +248,7 @@ export default function StockCustomViewTab({
     let sum = 0, cnt = 0;
     if (indicators.rsi && rsi !== null) { sum += (100 - rsi); cnt++; }
     if (indicators.bollinger && bb) { sum += Math.max(0, Math.min(100, (1 - bb.percentB) * 100)); cnt++; }
-    if (indicators.momentum && momentum !== undefined) { sum += Math.max(0, Math.min(100, 50 - momentum * 10)); cnt++; }
+    if (indicators.priceMomentum && momentum !== undefined) { sum += Math.max(0, Math.min(100, 50 - momentum * 10)); cnt++; }
     if (indicators.macd && macd) {
       const cp = displayDay.length > 0 ? displayDay[displayDay.length - 1].trade_price : 1;
       sum += Math.max(0, Math.min(100, 50 + (macd.hist / cp) * 1000)); cnt++;
@@ -316,11 +316,12 @@ export default function StockCustomViewTab({
         <div className="flex flex-wrap gap-2">
           <ToggleButton active={indicators.bollinger} onClick={() => toggleIndicator('bollinger')} label="Bollinger Bands" />
           <ToggleButton active={indicators.momentum} onClick={() => toggleIndicator('momentum')} label="Price Chart" />
+          <ToggleButton active={indicators.priceMomentum} onClick={() => toggleIndicator('priceMomentum')} label="Price Momentum" />
+          <ToggleButton active={indicators.zscore} onClick={() => toggleIndicator('zscore')} label="Z-Score" />
           <ToggleButton active={indicators.rsi} onClick={() => toggleIndicator('rsi')} label="RSI-14" />
           <ToggleButton active={indicators.stochrsi} onClick={() => toggleIndicator('stochrsi')} label="Stoch RSI" />
           <ToggleButton active={indicators.mfi} onClick={() => toggleIndicator('mfi')} label="MFI-14" />
           <ToggleButton active={indicators.intensity} onClick={() => toggleIndicator('intensity')} label="Trade Intensity" />
-          <ToggleButton active={indicators.zscore} onClick={() => toggleIndicator('zscore')} label="Z-Score" />
           <ToggleButton active={indicators.macd} onClick={() => toggleIndicator('macd')} label="MACD (12,26,9)" />
         </div>
       </div>
@@ -342,6 +343,33 @@ export default function StockCustomViewTab({
               <div className="flex items-center gap-2 mb-1"><Activity size={16} className="text-cyan-400" /><h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Price Chart</h3></div>
               <p className="text-xs text-slate-500 font-medium mb-2">최근 약 3개월(60일) 일봉 추세와 이동평균선(MA20)입니다.</p>
               <div className="mt-auto pt-2"><StockPriceChart dayCandles={displayDay} /></div>
+            </div>
+          </div>
+        )}
+        {indicators.priceMomentum && (
+          <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl border border-white/5 flex flex-col">
+            <div className="text-left font-sans flex-1">
+              <div className="flex items-center gap-2 mb-1"><Zap size={16} className="text-yellow-400" /><h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Price Momentum</h3></div>
+              <div className="flex items-baseline gap-3 mb-4">
+                <span className={`text-5xl font-black tracking-tighter tabular-nums ${momentum >= 0 ? 'text-white' : 'text-blue-400'}`}>
+                  {momentum.toFixed(2)}%
+                </span>
+                <div className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${momentum >= 0 ? 'bg-red-500/10 text-red-400 border-red-500/30' : 'bg-blue-500/10 text-blue-400 border-blue-500/30'}`}>
+                  {momentum >= 0 ? 'UP' : 'DOWN'}
+                </div>
+              </div>
+              <p className="text-xs text-slate-400 font-medium leading-relaxed border-t border-white/10 pt-4">최근 5분 가격 변동률</p>
+            </div>
+          </div>
+        )}
+        {indicators.zscore && (
+          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col">
+            <div className="text-left font-sans flex-1 flex flex-col">
+              <div className="flex items-center gap-2 mb-1"><Gauge size={16} className="text-orange-500" /><h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Z-Score</h3></div>
+              <p className="text-xs text-slate-500 font-medium mb-3">20일 평균선(MA20) 대비 표준편차 괴리도.</p>
+              <div className="my-auto flex items-center justify-center gap-3">
+                <span className={`text-6xl font-black tracking-tighter tabular-nums ${getZScoreColor(zScoreValue)}`}>{zScoreValue > 0 ? '+' : ''}{zScoreValue}</span>
+              </div>
             </div>
           </div>
         )}
@@ -378,17 +406,6 @@ export default function StockCustomViewTab({
               <div className="flex items-center gap-2 mb-1"><Zap size={16} className="text-amber-500" /><h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Trade Intensity</h3></div>
               <p className="text-xs text-slate-500 font-medium mb-3">최근 12일간의 매수/매도 압력 추정.</p>
               <div className="mt-auto"><TradeIntensityGauge candles={displayRecent12} /></div>
-            </div>
-          </div>
-        )}
-        {indicators.zscore && (
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col">
-            <div className="text-left font-sans flex-1 flex flex-col">
-              <div className="flex items-center gap-2 mb-1"><Gauge size={16} className="text-orange-500" /><h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Z-Score</h3></div>
-              <p className="text-xs text-slate-500 font-medium mb-3">20일 평균선(MA20) 대비 표준편차 괴리도.</p>
-              <div className="my-auto flex items-center justify-center gap-3">
-                <span className={`text-6xl font-black tracking-tighter tabular-nums ${getZScoreColor(zScoreValue)}`}>{zScoreValue > 0 ? '+' : ''}{zScoreValue}</span>
-              </div>
             </div>
           </div>
         )}

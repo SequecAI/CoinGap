@@ -6,6 +6,7 @@ const DEFAULT_SETTINGS = {
   indicators: {
     bollinger: true,
     momentum: true,
+    priceMomentum: true,
     intensity: true,
     rsi: true,
     zscore: true,

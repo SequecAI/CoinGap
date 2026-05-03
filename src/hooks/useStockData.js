@@ -34,6 +34,7 @@ export function useStockData() {
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [minuteMomentum, setMinuteMomentum] = useState(0);
 
   // 검색 debounce
   const searchTimeoutRef = useRef(null);
@@ -92,6 +93,23 @@ export function useStockData() {
           }
           if (kospi) setKospiData(kospi);
           if (kosdaq) setKosdaqData(kosdaq);
+
+          // ── 5분 모멘텀 가져오기 ──
+          try {
+            const url = `https://fchart.stock.naver.com/sise.nhn?symbol=${selectedStock.code}&requestType=0&count=6&timeframe=minute`;
+            const xmlRes = await fetch(url);
+            const text = await xmlRes.text();
+            const matches = [...text.matchAll(/<item data="([^"]+)"/g)];
+            if (matches.length >= 6) {
+              const currentPrice = parseFloat(matches[matches.length - 1][1].split('|')[4]);
+              const pastPrice = parseFloat(matches[0][1].split('|')[4]);
+              if (pastPrice > 0) {
+                setMinuteMomentum(((currentPrice - pastPrice) / pastPrice) * 100);
+              }
+            }
+          } catch (me) {
+            console.error('Momentum fetch error', me);
+          }
         }
       } catch (e) { }
       if (isMounted) timeoutId = setTimeout(fetchRealtime, 5000);
@@ -204,8 +222,7 @@ export function useStockData() {
   const kosdaqChange = kosdaqData ? parseFloat(kosdaqData.fluctuationsRatio) || 0 : 0;
   const kosdaqDirection = kosdaqData?.compareToPreviousPrice?.name || 'UNCHANGED';
 
-  // 5분봉 모멘텀 대체: 일봉 최근 1일의 시가 대비 변동률
-  const momentum = dayCandles.length > 0
+  const stockMomentum = dayCandles.length > 0
     ? ((dayCandles[dayCandles.length - 1].trade_price / dayCandles[dayCandles.length - 1].opening_price) - 1) * 100
     : 0;
 
@@ -240,7 +257,7 @@ export function useStockData() {
     // 차트/분석 데이터
     dayCandles,
     dayPrices,
-    momentum,
+    momentum: minuteMomentum,
 
     // 지수
     kospiPrice, kospiChange, kospiDirection,

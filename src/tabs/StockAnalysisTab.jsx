@@ -335,6 +335,7 @@ export default function StockAnalysisTab({
   foreignRate,
   high52w, low52w,
   dealTrends,
+  minuteCandles,
   kospiPrice, kospiChange, kospiDirection,
   kosdaqPrice, kosdaqChange, kosdaqDirection,
 }) {
@@ -369,7 +370,7 @@ export default function StockAnalysisTab({
           <div className="relative z-10 text-left font-sans flex-1">
             <div className="flex items-center gap-2 mb-1">
               <Crosshair size={16} className="text-violet-500" />
-              <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Signal</h3>
+              <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Signal Score</h3>
             </div>
             <p className="text-xs text-slate-500 font-medium mb-3">
               RSI, 볼린저, 5분 모멘텀 기반 <span className="text-violet-600 font-bold">매수/매도 신호</span>
@@ -468,10 +469,10 @@ export default function StockAnalysisTab({
             <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Trade Intensity</h3>
           </div>
           <p className="text-xs text-slate-500 font-medium mb-3">
-            최근 12일간의 <span className="text-red-500 font-bold">매수</span> vs <span className="text-blue-500 font-bold">매도</span> 압력 추정입니다.
+            최근 <span className="text-red-500 font-bold">12개의 5분봉</span> 기준 매수/매도 압력 추정입니다.
           </p>
           <div className="mt-auto">
-            <TradeIntensityGauge candles={displayRecent12} />
+            <TradeIntensityGauge candles={minuteCandles} />
           </div>
         </div>
       </div>

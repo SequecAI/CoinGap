@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { safeFetch } from './useUpbitData';
 
-const NAVER_BASE = 'https://m.stock.naver.com';
+const NAVER_BASE = '/naver-api';
 
 // 기본 종목 리스트 (시가총액 상위)
 export const DEFAULT_STOCKS = [
@@ -35,6 +35,7 @@ export function useStockData() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [minuteMomentum, setMinuteMomentum] = useState(0);
+  const [minuteCandles, setMinuteCandles] = useState([]);
 
   // 검색 debounce
   const searchTimeoutRef = useRef(null);
@@ -49,9 +50,9 @@ export function useStockData() {
 
     searchTimeoutRef.current = setTimeout(async () => {
       try {
-        const data = await safeFetch(
+        const data = await fetch(
           `${NAVER_BASE}/front-api/search/autoComplete?query=${encodeURIComponent(query)}&target=stock`
-        );
+        ).then(r => r.json()).catch(() => null);
         if (data && data.isSuccess && data.result && data.result.items) {
           // 국내 주식만 필터링
           const domestic = data.result.items.filter(
@@ -78,40 +79,69 @@ export function useStockData() {
 
     const fetchRealtime = async () => {
       if (!isMounted) return;
+      
+      const minuteUrl = `/naver-fchart/sise.nhn?symbol=${selectedStock.code}&requestType=0&count=60&timeframe=minute`;
+
       try {
-        const [basicData, kospi, kosdaq] = await Promise.all([
-          safeFetch(`${NAVER_BASE}/api/stock/${selectedStock.code}/basic`),
-          safeFetch(`${NAVER_BASE}/api/index/KOSPI/basic`),
-          safeFetch(`${NAVER_BASE}/api/index/KOSDAQ/basic`),
+        const [basicRes, kospiRes, kosdaqRes, xmlRes] = await Promise.all([
+          fetch(`${NAVER_BASE}/api/stock/${selectedStock.code}/basic`).then(r => r.json()).catch(() => null),
+          fetch(`${NAVER_BASE}/api/index/KOSPI/basic`).then(r => r.json()).catch(() => null),
+          fetch(`${NAVER_BASE}/api/index/KOSDAQ/basic`).then(r => r.json()).catch(() => null),
+          fetch(minuteUrl).then(r => r.text()).catch(() => null)
         ]);
 
         if (isMounted) {
-          if (basicData && basicData.stockName) {
-            setStockBasic(basicData);
+          if (basicRes && basicRes.stockName) {
+            setStockBasic(basicRes);
             setLoading(false);
             setLastUpdated(new Date());
           }
-          if (kospi) setKospiData(kospi);
-          if (kosdaq) setKosdaqData(kosdaq);
+          if (kospiRes) setKospiData(kospiRes);
+          if (kosdaqRes) setKosdaqData(kosdaqRes);
 
-          // ── 5분 모멘텀 가져오기 ──
-          try {
-            const url = `https://fchart.stock.naver.com/sise.nhn?symbol=${selectedStock.code}&requestType=0&count=6&timeframe=minute`;
-            const xmlRes = await fetch(url);
-            const text = await xmlRes.text();
-            const matches = [...text.matchAll(/<item data="([^"]+)"/g)];
-            if (matches.length >= 6) {
-              const currentPrice = parseFloat(matches[matches.length - 1][1].split('|')[4]);
-              const pastPrice = parseFloat(matches[0][1].split('|')[4]);
-              if (pastPrice > 0) {
-                setMinuteMomentum(((currentPrice - pastPrice) / pastPrice) * 100);
+          if (xmlRes) {
+            const matches = [...xmlRes.matchAll(/<item data="([^"]+)"/g)];
+            if (matches.length > 0) {
+              const allMinutes = matches.map(m => {
+                const parts = m[1].split('|');
+                const close = parseFloat(parts[4]);
+                return {
+                  opening_price: parseFloat(parts[1]) || close,
+                  high_price: parseFloat(parts[2]) || close,
+                  low_price: parseFloat(parts[3]) || close,
+                  trade_price: close,
+                  candle_acc_trade_volume: parseFloat(parts[5])
+                };
+              });
+
+              // 5분 단위 그룹화 (최신 데이터부터 5개씩 묶어서 12개 생성)
+              const grouped5m = [];
+              const reversed = [...allMinutes].reverse();
+              for (let i = 0; i < 12; i++) {
+                const chunk = reversed.slice(i * 5, (i + 1) * 5);
+                if (chunk.length === 0) break;
+                grouped5m.push({
+                  candle_date_time_kst: '',
+                  opening_price: chunk[chunk.length - 1].opening_price,
+                  high_price: Math.max(...chunk.map(c => c.high_price)),
+                  low_price: Math.min(...chunk.map(c => c.low_price)),
+                  trade_price: chunk[0].trade_price,
+                  candle_acc_trade_volume: chunk.reduce((sum, c) => sum + c.candle_acc_trade_volume, 0)
+                });
+              }
+              setMinuteCandles(grouped5m.reverse());
+
+              if (allMinutes.length >= 6) {
+                const cur = allMinutes[allMinutes.length - 1].trade_price;
+                const prev = allMinutes[allMinutes.length - 6].trade_price;
+                setMinuteMomentum(((cur - prev) / prev) * 100);
               }
             }
-          } catch (me) {
-            console.error('Momentum fetch error', me);
           }
         }
-      } catch (e) { }
+      } catch (e) {
+        console.error('Realtime fetch error', e);
+      }
       if (isMounted) timeoutId = setTimeout(fetchRealtime, 5000);
     };
 
@@ -258,6 +288,7 @@ export function useStockData() {
     dayCandles,
     dayPrices,
     momentum: minuteMomentum,
+    minuteCandles,
 
     // 지수
     kospiPrice, kospiChange, kospiDirection,

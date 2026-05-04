@@ -217,7 +217,9 @@ function ToggleButton({ active, onClick, label }) {
 export default function StockCustomViewTab({
   dayCandles, momentum, stockName, currentPrice, changeRate, changeDirection,
   marketCap, per, pbr, eps, bps, dividendYield, foreignRate, high52w, low52w,
-  dealTrends, kospiPrice, kospiChange, kospiDirection, kosdaqPrice, kosdaqChange, kosdaqDirection,
+  dealTrends,
+  minuteCandles,
+  kospiPrice, kospiChange, kospiDirection, kosdaqPrice, kosdaqChange, kosdaqDirection,
 }) {
   const { settings, toggleIndicator } = useCustomSettings();
   const { indicators } = settings;
@@ -277,7 +279,7 @@ export default function StockCustomViewTab({
             <div className="relative z-10 text-left font-sans flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <Crosshair size={16} className="text-violet-500" />
-                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Custom Signal</h3>
+                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Signal Score</h3>
               </div>
               <p className="text-xs text-slate-500 font-medium mb-3">커스텀 지표 조합 <span className="text-violet-600 font-bold">시그널</span></p>
               <div className="flex flex-col gap-3 w-full">
@@ -404,8 +406,8 @@ export default function StockCustomViewTab({
           <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col">
             <div className="text-left font-sans flex-1 flex flex-col">
               <div className="flex items-center gap-2 mb-1"><Zap size={16} className="text-amber-500" /><h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Trade Intensity</h3></div>
-              <p className="text-xs text-slate-500 font-medium mb-3">최근 12일간의 매수/매도 압력 추정.</p>
-              <div className="mt-auto"><TradeIntensityGauge candles={displayRecent12} /></div>
+              <p className="text-xs text-slate-500 font-medium mb-3">최근 12개의 5분봉 기준 매수/매도 압력 추정.</p>
+              <div className="mt-auto"><TradeIntensityGauge candles={minuteCandles} /></div>
             </div>
           </div>
         )}

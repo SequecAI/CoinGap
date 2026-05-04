@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/naver-fchart/:path*",
+      "destination": "https://fchart.stock.naver.com/:path*"
+    },
+    {
+      "source": "/naver-api/:path*",
+      "destination": "https://m.stock.naver.com/:path*"
+    }
+  ]
+}

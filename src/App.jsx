@@ -289,6 +289,7 @@ export default function App() {
             foreignRate={stockData.foreignRate}
             high52w={stockData.high52w} low52w={stockData.low52w}
             dealTrends={stockData.dealTrends}
+            minuteCandles={stockData.minuteCandles}
             kospiPrice={stockData.kospiPrice} kospiChange={stockData.kospiChange} kospiDirection={stockData.kospiDirection}
             kosdaqPrice={stockData.kosdaqPrice} kosdaqChange={stockData.kosdaqChange} kosdaqDirection={stockData.kosdaqDirection}
           />
@@ -309,6 +310,7 @@ export default function App() {
         {activeTab === 'custom' && appMode === 'stock' && (
           <StockCustomViewTab
             dayCandles={stockData.dayCandles}
+            minuteCandles={stockData.minuteCandles}
             momentum={stockData.momentum}
             stockName={stockData.selectedStock.name}
             currentPrice={stockData.currentPrice}

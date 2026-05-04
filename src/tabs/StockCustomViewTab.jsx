@@ -262,10 +262,10 @@ export default function StockCustomViewTab({
 
   const finalScore = calcScore();
   const getLabel = (s) => {
-    if (s >= 70) return { text: 'Strong Buy', bg: 'bg-emerald-500/10', tc: 'text-emerald-500', bc: 'border-emerald-500/30' };
-    if (s >= 55) return { text: 'Buy', bg: 'bg-emerald-400/10', tc: 'text-emerald-400', bc: 'border-emerald-400/30' };
-    if (s <= 30) return { text: 'Strong Sell', bg: 'bg-red-500/10', tc: 'text-red-500', bc: 'border-red-500/30' };
-    if (s <= 45) return { text: 'Sell', bg: 'bg-red-400/10', tc: 'text-red-400', bc: 'border-red-400/30' };
+    if (s >= 85) return { text: 'Strong Buy', bg: 'bg-emerald-500/10', tc: 'text-emerald-500', bc: 'border-emerald-500/30' };
+    if (s >= 65) return { text: 'Buy', bg: 'bg-emerald-400/10', tc: 'text-emerald-400', bc: 'border-emerald-400/30' };
+    if (s <= 15) return { text: 'Strong Sell', bg: 'bg-red-500/10', tc: 'text-red-500', bc: 'border-red-500/30' };
+    if (s <= 35) return { text: 'Sell', bg: 'bg-red-400/10', tc: 'text-red-400', bc: 'border-red-400/30' };
     return { text: 'Neutral', bg: 'bg-slate-400/10', tc: 'text-slate-400', bc: 'border-slate-400/30' };
   };
   const label = getLabel(finalScore);
@@ -292,7 +292,7 @@ export default function StockCustomViewTab({
                 </div>
                 <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden relative">
                   <div className="absolute inset-0 flex">
-                    <div className="w-[30%] bg-red-500" /><div className="w-[15%] bg-orange-400" /><div className="w-[10%] bg-slate-300" /><div className="w-[15%] bg-emerald-400" /><div className="w-[30%] bg-emerald-500" />
+                    <div className="w-[15%] bg-red-500" /><div className="w-[20%] bg-orange-400" /><div className="w-[30%] bg-slate-300" /><div className="w-[20%] bg-emerald-400" /><div className="w-[15%] bg-emerald-500" />
                   </div>
                   <div className="absolute top-0 h-full w-1.5 bg-slate-900 rounded-full transition-all duration-700 shadow-md border border-white" style={{ left: `${finalScore}%`, transform: 'translateX(-50%)' }} />
                 </div>

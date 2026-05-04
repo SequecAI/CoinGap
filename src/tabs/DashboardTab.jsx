@@ -20,10 +20,10 @@ function DashboardSignalPanel({ momentum5m, zScoreValue }) {
   const score = (zScoreMapped + momMapped) / 2;
 
   const getLabel = (s) => {
-    if (s >= 70) return { text: 'Strong Buy', color: '#10b981', bg: 'bg-emerald-500/10', tc: 'text-emerald-500', bc: 'border-emerald-500/30' };
-    if (s >= 55) return { text: 'Buy', color: '#34d399', bg: 'bg-emerald-400/10', tc: 'text-emerald-400', bc: 'border-emerald-400/30' };
-    if (s <= 30) return { text: 'Strong Sell', color: '#ef4444', bg: 'bg-red-500/10', tc: 'text-red-500', bc: 'border-red-500/30' };
-    if (s <= 45) return { text: 'Sell', color: '#f87171', bg: 'bg-red-400/10', tc: 'text-red-400', bc: 'border-red-400/30' };
+    if (s >= 85) return { text: 'Strong Buy', color: '#10b981', bg: 'bg-emerald-500/10', tc: 'text-emerald-500', bc: 'border-emerald-500/30' };
+    if (s >= 65) return { text: 'Buy', color: '#34d399', bg: 'bg-emerald-400/10', tc: 'text-emerald-400', bc: 'border-emerald-400/30' };
+    if (s <= 15) return { text: 'Strong Sell', color: '#ef4444', bg: 'bg-red-500/10', tc: 'text-red-500', bc: 'border-red-500/30' };
+    if (s <= 35) return { text: 'Sell', color: '#f87171', bg: 'bg-red-400/10', tc: 'text-red-400', bc: 'border-red-400/30' };
     return { text: 'Neutral', color: '#94a3b8', bg: 'bg-slate-400/10', tc: 'text-slate-400', bc: 'border-slate-400/30' };
   };
   const label = getLabel(score);
@@ -52,11 +52,11 @@ function DashboardSignalPanel({ momentum5m, zScoreValue }) {
 
           <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden relative">
             <div className="absolute inset-0 flex">
-              <div className="w-[30%] bg-red-500"></div>
-              <div className="w-[15%] bg-orange-400"></div>
-              <div className="w-[10%] bg-slate-300"></div>
-              <div className="w-[15%] bg-emerald-400"></div>
-              <div className="w-[30%] bg-emerald-500"></div>
+              <div className="w-[15%] bg-red-500"></div>
+              <div className="w-[20%] bg-orange-400"></div>
+              <div className="w-[30%] bg-slate-300"></div>
+              <div className="w-[20%] bg-emerald-400"></div>
+              <div className="w-[15%] bg-emerald-500"></div>
             </div>
             <div className="absolute top-0 h-full w-1.5 bg-slate-900 rounded-full transition-all duration-700 shadow-md border border-white"
               style={{ left: `${score}%`, transform: 'translateX(-50%)' }} />

@@ -22,3 +22,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Windows / OneDrive sync artifacts
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Tool caches
+.eslintcache
+
+# Vercel
+.vercel
+
+# Claude Code local settings
+.claude/
+
+# Personal notes / drafts
+CLUADE.ko.md

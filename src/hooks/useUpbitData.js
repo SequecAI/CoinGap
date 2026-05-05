@@ -1,6 +1,4 @@
-import { useState, useEffect } from 'react';
-
-export const TARGET_ALTS = ['KRW-BTC', 'KRW-ETH', 'KRW-XRP', 'KRW-TRX', 'KRW-SOL', 'KRW-DOGE', 'KRW-ADA', 'KRW-SHIB', 'KRW-ORCA', 'KRW-BLEND'];
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export const safeFetch = async (url) => {
   const proxies = ['', 'https://api.codetabs.com/v1/proxy?quest=', 'https://corsproxy.io/?'];
@@ -19,7 +17,7 @@ export const safeFetch = async (url) => {
 
 export function useUpbitData() {
   const [markets, setMarkets] = useState([]);
-  const [selectedAlt, setSelectedAlt] = useState(TARGET_ALTS[1]);
+  const [selectedAlt, setSelectedAlt] = useState('KRW-ETH');
   const [tickers, setTickers] = useState({});
   const [dominance, setDominance] = useState(52.5);
   const [ma20, setMa20] = useState(0);
@@ -28,6 +26,34 @@ export function useUpbitData() {
   const [dayCandles, setDayCandles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [searchResults, setSearchResults] = useState([]);
+
+  const searchTimeoutRef = useRef(null);
+
+  // ── 종목 검색 (클라이언트 사이드 필터) ──
+  const searchCoin = useCallback((query) => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    const q = (query || '').trim().toLowerCase();
+    if (!q) {
+      setSearchResults([]);
+      return;
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      const results = markets.filter(m => {
+        const code = m.market.replace('KRW-', '').toLowerCase();
+        return (
+          m.korean_name?.toLowerCase().includes(q) ||
+          m.english_name?.toLowerCase().includes(q) ||
+          code.includes(q)
+        );
+      }).slice(0, 8);
+      setSearchResults(results);
+    }, 150);
+  }, [markets]);
+
+  const clearSearch = useCallback(() => {
+    setSearchResults([]);
+  }, []);
 
   // 1. 마켓 목록 및 거시 지표 가져오기
   useEffect(() => {
@@ -41,8 +67,8 @@ export function useUpbitData() {
         if (isMounted) {
           if (marketData) {
             const krwMarkets = marketData
-              .filter(m => TARGET_ALTS.includes(m.market))
-              .sort((a, b) => TARGET_ALTS.indexOf(a.market) - TARGET_ALTS.indexOf(b.market));
+              .filter(m => m.market.startsWith('KRW-'))
+              .sort((a, b) => a.korean_name.localeCompare(b.korean_name, 'ko'));
             setMarkets(krwMarkets);
           }
           if (domData && domData[0] && domData[0].btc_d) {
@@ -87,15 +113,17 @@ export function useUpbitData() {
     return () => { isMounted = false; if (timeoutId) clearTimeout(timeoutId); };
   }, [selectedAlt, tickers]);
 
-  // 3. 실시간 시세 업데이트
+  // 3. 실시간 시세 업데이트 — BTC + 선택 알트만, 5초 간격
   useEffect(() => {
     let isMounted = true;
     let timeoutId = null;
-    const fetchAllTickers = async () => {
+    const fetchTickers = async () => {
       if (!isMounted) return;
       try {
-        const upbitQuery = [...new Set(['KRW-BTC', ...TARGET_ALTS])].join(',');
-        const upbitData = await safeFetch(`https://api.upbit.com/v1/ticker?markets=${upbitQuery}`);
+        const query = selectedAlt === 'KRW-BTC'
+          ? 'KRW-BTC'
+          : `KRW-BTC,${selectedAlt}`;
+        const upbitData = await safeFetch(`https://api.upbit.com/v1/ticker?markets=${query}`);
         if (isMounted && upbitData) {
           const newTickers = {};
           upbitData.forEach(t => { newTickers[t.market] = t; });
@@ -104,11 +132,11 @@ export function useUpbitData() {
           setLoading(false);
         }
       } catch (error) { }
-      finally { if (isMounted) timeoutId = setTimeout(fetchAllTickers, 2000); }
+      finally { if (isMounted) timeoutId = setTimeout(fetchTickers, 5000); }
     };
-    if (markets.length > 0 || !loading) fetchAllTickers();
+    if (markets.length > 0) fetchTickers();
     return () => { isMounted = false; if (timeoutId) clearTimeout(timeoutId); };
-  }, [markets]);
+  }, [markets, selectedAlt]);
 
   return {
     markets,
@@ -121,6 +149,9 @@ export function useUpbitData() {
     candles5m,
     dayCandles,
     loading,
-    lastUpdated
+    lastUpdated,
+    searchCoin,
+    searchResults,
+    clearSearch
   };
 }

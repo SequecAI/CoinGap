@@ -31,7 +31,10 @@ export default function App() {
     candles5m,
     dayCandles,
     loading,
-    lastUpdated
+    lastUpdated,
+    searchCoin,
+    searchResults: coinSearchResults,
+    clearSearch: clearCoinSearch
   } = useUpbitData();
 
   const stockData = useStockData();
@@ -43,7 +46,10 @@ export default function App() {
   const [appMode, setAppMode] = useState(() => localStorage.getItem('coinGap_appMode') || 'crypto');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [coinSearchQuery, setCoinSearchQuery] = useState('');
+  const [showCoinSearch, setShowCoinSearch] = useState(false);
   const searchRef = useRef(null);
+  const coinSearchRef = useRef(null);
 
   // 검색 외부 클릭 시 닫기
   useEffect(() => {
@@ -51,6 +57,10 @@ export default function App() {
       if (searchRef.current && !searchRef.current.contains(e.target)) {
         setShowSearch(false);
         stockData.clearSearch();
+      }
+      if (coinSearchRef.current && !coinSearchRef.current.contains(e.target)) {
+        setShowCoinSearch(false);
+        clearCoinSearch();
       }
     };
     document.addEventListener('mousedown', handler);
@@ -108,14 +118,8 @@ export default function App() {
   const rsiStrength = altRate > btcRate ? 'Stronger' : 'Weaker';
   const disparity = (alt && ma20 > 0) ? (alt.trade_price / ma20) * 100 : 100;
 
-  // 명칭 변환: 긴 이름 축약 처리
-  const getDisplayName = (m) => {
-    if (m.market === 'KRW-XRP') return '리플';
-    if (m.market === 'KRW-DOGE') return '도지';
-    return m.korean_name;
-  };
   const currentMarket = markets.find(m => m.market === selectedAlt);
-  const altName = currentMarket ? getDisplayName(currentMarket) : selectedAlt;
+  const altName = currentMarket ? currentMarket.korean_name : selectedAlt;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pt-6 pb-20 px-4 text-left">
@@ -154,11 +158,42 @@ export default function App() {
                   <label className="text-[10px] font-black text-orange-400 px-1 uppercase tracking-tighter">Z-Score Alert</label>
                   <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-orange-500 transition-all tabular-nums text-left" value={zScoreThreshold} onChange={(e) => setZScoreThreshold(Number(e.target.value))} />
                 </div>
-                <div className="flex flex-col gap-1 text-left">
-                  <label className="text-[10px] font-black text-slate-400 px-1 uppercase tracking-tighter">Compare</label>
-                  <select className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-40 font-bold outline-none cursor-pointer focus:ring-2 focus:ring-blue-500 transition-all text-left font-sans" value={selectedAlt} onChange={(e) => setSelectedAlt(e.target.value)}>
-                    {markets.map((m) => (<option key={m.market} value={m.market}>{getDisplayName(m)}</option>))}
-                  </select>
+                <div className="relative" ref={coinSearchRef}>
+                  <div className="flex flex-col gap-1 text-left">
+                    <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">Compare: {altName}</label>
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input type="text" placeholder="코인명 또는 코드" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 pl-8 pr-8 w-full sm:w-52 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all text-left font-sans text-sm"
+                        value={coinSearchQuery}
+                        onChange={(e) => { setCoinSearchQuery(e.target.value); searchCoin(e.target.value); setShowCoinSearch(true); }}
+                        onFocus={() => setShowCoinSearch(true)} />
+                      {coinSearchQuery && (
+                        <button onClick={() => { setCoinSearchQuery(''); clearCoinSearch(); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {/* 검색 결과 드롭다운 */}
+                  {showCoinSearch && coinSearchResults.length > 0 && (
+                    <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden max-h-72 overflow-y-auto">
+                      {coinSearchResults.map((m) => (
+                        <button key={m.market} className="w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors flex items-center justify-between border-b border-slate-50 last:border-0"
+                          onClick={() => {
+                            setSelectedAlt(m.market);
+                            setCoinSearchQuery('');
+                            setShowCoinSearch(false);
+                            clearCoinSearch();
+                          }}>
+                          <div>
+                            <p className="font-bold text-sm text-slate-900">{m.korean_name}</p>
+                            <p className="text-[10px] text-slate-400 font-bold">{m.market.replace('KRW-', '')}</p>
+                          </div>
+                          <span className="text-[10px] font-black text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">{m.english_name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </>
             ) : (

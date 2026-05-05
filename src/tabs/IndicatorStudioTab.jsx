@@ -544,7 +544,7 @@ export default function IndicatorStudioTab({
               className="h-full min-h-[120px] bg-blue-600 hover:bg-blue-700 text-white rounded-[2.5rem] font-black text-sm shadow-xl shadow-blue-200 transition-all flex flex-col items-center justify-center gap-3 p-6 active:scale-95"
             >
               <Save size={24} />
-              <span>패널 목록에 저장</span>
+              <span>지표 보관함에 저장</span>
               <span className="text-[10px] opacity-60 font-bold tracking-tighter">{indicators.length} SAVED</span>
             </button>
           </div>

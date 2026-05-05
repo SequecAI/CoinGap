@@ -52,7 +52,6 @@ export default function IndicatorStudioTab({
     strongBuy: 3, buy: 1, neutral: -1, sell: -3
   });
   const [selectedSavedIndicatorId, setSelectedSavedIndicatorId] = useState(null);
-  const [isVarOpen, setIsVarOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState({
     btc: false, alt: false, prev: false, tech: false, orderbook: false, math: false
   });
@@ -466,19 +465,12 @@ export default function IndicatorStudioTab({
 
         {/* 변수 팔레트 */}
         <div className="space-y-4">
-          <div
-            className="flex items-center justify-between cursor-pointer py-2 ml-2 hover:opacity-70 transition-opacity"
-            onClick={() => setIsVarOpen(!isVarOpen)}
-          >
-            <div className="flex items-center gap-2">
-              <Plus size={16} className="text-blue-600" />
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Available Variables &amp; Functions</h3>
-            </div>
-            {isVarOpen ? <ChevronUp size={18} className="text-slate-400 mr-2" /> : <ChevronDown size={18} className="text-slate-400 mr-2" />}
+          <div className="flex items-center gap-2 py-2 ml-2">
+            <Plus size={16} className="text-blue-600" />
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Available Variables &amp; Functions</h3>
           </div>
 
-          {isVarOpen && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {variableGroups.map(group => (
                 <div key={group.id} className="bg-slate-50 p-4 rounded-3xl border border-slate-100 transition-all">
                   <div
@@ -514,8 +506,7 @@ export default function IndicatorStudioTab({
                   )}
                 </div>
               ))}
-            </div>
-          )}
+          </div>
         </div>
 
         {/* 수식 에디터 */}

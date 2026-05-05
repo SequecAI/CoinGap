@@ -19,6 +19,7 @@ import CustomViewTab from './tabs/CustomViewTab';
 import StockAnalysisTab from './tabs/StockAnalysisTab';
 import StockCustomViewTab from './tabs/StockCustomViewTab';
 import IndicatorStudioTab from './tabs/IndicatorStudioTab';
+import StockEditorTab from './tabs/StockEditorTab';
 
 export default function App() {
   const {
@@ -78,10 +79,12 @@ export default function App() {
     localStorage.setItem('coinGap_appMode', appMode);
   }, [appMode]);
 
-  // 모드 전환 시 탭 리셋
+  // 모드 전환 시 탭 호환성 유지 (dashboard는 코인 전용)
   const handleModeSwitch = (mode) => {
     setAppMode(mode);
-    setActiveTab(mode === 'stock' ? 'analysis' : 'dashboard');
+    if (mode === 'stock' && activeTab === 'dashboard') {
+      setActiveTab('analysis');
+    }
   };
 
   const isLoading = appMode === 'crypto' ? loading : stockData.loading;
@@ -272,12 +275,10 @@ export default function App() {
             className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'custom' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
             Custom View
           </button>
-          {appMode === 'crypto' && (
-            <button onClick={() => setActiveTab('studio')}
-              className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'studio' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
-              Editor
-            </button>
-          )}
+          <button onClick={() => setActiveTab('studio')}
+            className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'studio' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
+            Editor
+          </button>
         </div>
 
         {/* 탭 내용 */}
@@ -369,6 +370,10 @@ export default function App() {
             dayCandles={dayCandles}
             orderbook={orderbook}
           />
+        )}
+
+        {activeTab === 'studio' && appMode === 'stock' && (
+          <StockEditorTab stockData={stockData} />
         )}
 
         {activeTab === 'custom' && appMode === 'stock' && (

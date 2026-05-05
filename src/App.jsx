@@ -357,6 +357,7 @@ export default function App() {
         {activeTab === 'studio' && appMode === 'crypto' && (
           <IndicatorStudioTab
             tickers={tickers}
+            markets={markets}
             selectedAlt={selectedAlt}
             altName={altName}
             btcRate={btcRate}

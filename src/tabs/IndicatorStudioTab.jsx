@@ -2,9 +2,10 @@ import React, { useState, useMemo, useRef } from 'react';
 import {
   Activity, Info, BookOpen, Code, Plus, Save, Play,
   AlertCircle, CheckCircle2, Unlock, Pencil, X,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, BarChart3, RefreshCcw
 } from 'lucide-react';
 import { useStudioIndicators } from '../hooks/useStudioIndicators';
+import { runBacktest, usesOrderbookVars } from '../utils/backtest';
 
 // ── 일봉 RSI(14) ──
 function calcRSI(candles, period = 14) {
@@ -38,17 +39,17 @@ function calcBollinger(candles, period = 20, multiplier = 2) {
 }
 
 export default function IndicatorStudioTab({
-  tickers, selectedAlt, altName,
+  tickers, markets, selectedAlt, altName,
   btcRate, altRate, momentum5m, volRatio, zScoreValue,
   candles5m, dayCandles, orderbook
 }) {
   const { indicators, addIndicator, updateIndicator, removeIndicator } = useStudioIndicators();
 
   // ── 에디터 내부 state ──
-  const [formula, setFormula] = useState("Z_SCORE * (BID_ASK_RATIO / 100) - (RSI_14 - 50) * 0.1");
-  const [indicatorName, setIndicatorName] = useState("갭-호가 동조 신호");
+  const [formula, setFormula] = useState("Z_SCORE - (RSI_14 - 50) * 0.1");
+  const [indicatorName, setIndicatorName] = useState("RSI 보정 갭 신호");
   const [thresholds, setThresholds] = useState({
-    strongBuy: 15, buy: 5, neutral: -5, sell: -15
+    strongBuy: 3, buy: 1, neutral: -1, sell: -3
   });
   const [selectedSavedIndicatorId, setSelectedSavedIndicatorId] = useState(null);
   const [isVarOpen, setIsVarOpen] = useState(false);
@@ -56,6 +57,9 @@ export default function IndicatorStudioTab({
     btc: false, alt: false, prev: false, tech: false, orderbook: false, math: false
   });
   const [modalState, setModalState] = useState({ isOpen: false, type: '', message: '', onConfirm: null });
+  const [backtestRunning, setBacktestRunning] = useState(false);
+  const [backtestProgress, setBacktestProgress] = useState(0);
+  const [backtestResult, setBacktestResult] = useState(null);
   const formulaInputRef = useRef(null);
   const editorRef = useRef(null);
 
@@ -63,8 +67,19 @@ export default function IndicatorStudioTab({
     setIndicatorName(ind.name);
     setFormula(ind.formula);
     setThresholds({ ...ind.thresholds });
+    setBacktestResult(ind.backtest || null);
     setSelectedSavedIndicatorId(ind.id);
     editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // 수식·임계값 편집 시 기존 백테스트 결과는 무효화
+  const handleFormulaChange = (val) => {
+    setFormula(val);
+    setBacktestResult(null);
+  };
+  const handleThresholdChange = (key, val) => {
+    setThresholds({ ...thresholds, [key]: val });
+    setBacktestResult(null);
   };
 
   const showAlert = (message) => {
@@ -146,6 +161,7 @@ export default function IndicatorStudioTab({
       id: 'orderbook',
       title: '시장 압력 (Orderbook)',
       colorClass: 'bg-rose-50 border-rose-200 hover:border-rose-400 text-rose-600',
+      warning: '※ 호가 변수는 과거 데이터가 제공되지 않아, 사용 시 백테스트가 비활성화됩니다.',
       items: [
         { label: '매수 총잔량', value: 'TOTAL_BID', data: orderbook.totalBid },
         { label: '매도 총잔량', value: 'TOTAL_ASK', data: orderbook.totalAsk },
@@ -211,7 +227,28 @@ export default function IndicatorStudioTab({
 
   const addVariable = (val, isFunction) => {
     setFormula(prev => prev + (isFunction ? val : ` ${val} `));
+    setBacktestResult(null);
     if (formulaInputRef.current) formulaInputRef.current.focus();
+  };
+
+  const handleRunBacktest = async () => {
+    if (usesOrderbookVars(formula)) return;
+    setBacktestRunning(true);
+    setBacktestProgress(0);
+    setBacktestResult(null);
+    try {
+      const result = await runBacktest({
+        altMarket: selectedAlt,
+        formula,
+        thresholds,
+        onProgress: (pct) => setBacktestProgress(pct),
+      });
+      setBacktestResult({ ...result, altName });
+    } catch (e) {
+      showAlert(`백테스트 실패: ${e.message || e}`);
+    } finally {
+      setBacktestRunning(false);
+    }
   };
 
   const handleSaveIndicator = () => {
@@ -219,25 +256,53 @@ export default function IndicatorStudioTab({
       showAlert('지표 이름을 입력해주세요.');
       return;
     }
+    const MAX_INDICATORS = 3;
     const existing = indicators.find(ind => ind.name === indicatorName.trim());
     if (existing) {
       showConfirm(`'${indicatorName}' 지표가 이미 존재합니다.\n기존 수식을 덮어쓰시겠습니까?`, () => {
         updateIndicator(existing.id, {
           formula: formula,
-          thresholds: { ...thresholds }
+          thresholds: { ...thresholds },
+          backtest: backtestResult,
         });
         setSelectedSavedIndicatorId(existing.id);
       });
+      return;
+    }
+    if (indicators.length >= MAX_INDICATORS) {
+      showAlert(`지표 보관함은 최대 ${MAX_INDICATORS}개까지만 저장 가능합니다.\n먼저 보관함에서 불필요한 지표를 삭제해 주세요.`);
       return;
     }
     const newIndicator = {
       id: Date.now(),
       name: indicatorName.trim(),
       formula: formula,
-      thresholds: { ...thresholds }
+      thresholds: { ...thresholds },
+      backtest: backtestResult,
     };
     addIndicator(newIndicator);
     setSelectedSavedIndicatorId(newIndicator.id);
+  };
+
+  const lookupCoinName = (marketCode) => {
+    const m = markets?.find(mk => mk.market === marketCode);
+    return m?.korean_name || marketCode.replace('KRW-', '');
+  };
+
+  const formatBacktestPeriod = (bt) => {
+    const toShort = (iso) => iso.split('T')[0].slice(2).replace(/-/g, '.');
+    const coinName = bt.altName || lookupCoinName(bt.altMarket);
+    return `${coinName} 백테스트 ${bt.days}일(${toShort(bt.periodStart)}~${toShort(bt.periodEnd)})`;
+  };
+
+  const formatBacktestRates = (bt) => {
+    const fmt = (data) => {
+      if (data.total === 0) return '–';
+      const win = (data.wins / data.total * 100).toFixed(1);
+      const big = (data.bigWins / data.total * 100).toFixed(1);
+      return `${win}%(대승 ${big}%)`;
+    };
+    return `매수 승 ${fmt(bt.buy)} · 매도 승 ${fmt(bt.sell)}`;
   };
 
   const handleDeleteClick = (e, ind) => {
@@ -293,6 +358,20 @@ export default function IndicatorStudioTab({
                       </div>
                     </div>
                     <p className="text-[10px] text-slate-500 font-mono truncate">{ind.formula}</p>
+                    {ind.backtest && ind.backtest.altMarket === selectedAlt ? (
+                      <div className="space-y-0.5">
+                        <p className="text-[10px] font-bold text-rose-300 tabular-nums truncate">
+                          {formatBacktestPeriod(ind.backtest)}
+                        </p>
+                        <p className="text-[10px] font-bold text-rose-300 tabular-nums truncate">
+                          {formatBacktestRates(ind.backtest)}
+                        </p>
+                      </div>
+                    ) : ind.backtest ? (
+                      <p className="text-[10px] font-bold text-slate-500 truncate">
+                        {altName} 백테스트 결과 없음
+                      </p>
+                    ) : null}
                     <div className="flex items-baseline gap-2">
                       <span className={`text-4xl font-black tracking-tighter tabular-nums ${signal.color}`}>
                         {result.error === 'invalid' ? 'NaN' : result.error === 'syntax' ? 'Err' : result.value}
@@ -320,7 +399,7 @@ export default function IndicatorStudioTab({
             <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full">클릭하여 편집 / X 로 삭제</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {indicators.map(ind => (
               <div
                 key={ind.id}
@@ -337,6 +416,20 @@ export default function IndicatorStudioTab({
                 <div className="truncate pr-4">
                   <p className="text-xs font-black text-slate-800 truncate">{ind.name}</p>
                   <p className="text-[10px] text-slate-400 font-mono truncate mt-1">{ind.formula}</p>
+                  {ind.backtest && ind.backtest.altMarket === selectedAlt ? (
+                    <div className="space-y-0.5 mt-0.5">
+                      <p className="text-[10px] font-bold text-rose-500 tabular-nums truncate">
+                        {formatBacktestPeriod(ind.backtest)}
+                      </p>
+                      <p className="text-[10px] font-bold text-rose-500 tabular-nums truncate">
+                        {formatBacktestRates(ind.backtest)}
+                      </p>
+                    </div>
+                  ) : ind.backtest ? (
+                    <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">
+                      {altName} 백테스트 결과 없음
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {ind.id === selectedSavedIndicatorId && (
@@ -401,18 +494,23 @@ export default function IndicatorStudioTab({
                   </div>
 
                   {openGroups[group.id] && (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {group.items.map(item => (
-                        <button
-                          key={item.value}
-                          onClick={() => addVariable(item.value, group.isFunction)}
-                          className={`flex flex-col items-start px-3 py-2 border rounded-xl transition-all active:scale-95 ${group.colorClass}`}
-                        >
-                          <span className="text-[10px] font-black uppercase tracking-tighter opacity-80">{item.label}</span>
-                          <span className="text-xs font-bold font-mono">{item.value}</span>
-                        </button>
-                      ))}
-                    </div>
+                    <>
+                      {group.warning && (
+                        <p className="text-[10px] font-bold text-rose-400 leading-tight mb-2 pl-1">{group.warning}</p>
+                      )}
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {group.items.map(item => (
+                          <button
+                            key={item.value}
+                            onClick={() => addVariable(item.value, group.isFunction)}
+                            className={`flex flex-col items-start px-3 py-2 border rounded-xl transition-all active:scale-95 ${group.colorClass}`}
+                          >
+                            <span className="text-[10px] font-black uppercase tracking-tighter opacity-80">{item.label}</span>
+                            <span className="text-xs font-bold font-mono">{item.value}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
               ))}
@@ -435,7 +533,7 @@ export default function IndicatorStudioTab({
                 ref={formulaInputRef}
                 className="w-full h-32 md:h-40 bg-slate-900 text-emerald-400 font-mono text-base p-4 pl-20 md:p-6 md:pl-28 rounded-3xl outline-none focus:ring-4 focus:ring-blue-500/20 transition-all resize-none leading-relaxed"
                 value={formula}
-                onChange={(e) => setFormula(e.target.value)}
+                onChange={(e) => handleFormulaChange(e.target.value)}
                 spellCheck="false"
               />
               {currentResult.error && (
@@ -463,7 +561,7 @@ export default function IndicatorStudioTab({
                 type="number" step="0.1"
                 className="w-12 md:w-16 shrink-0 bg-white border border-slate-300 rounded-lg px-1 py-1 text-center font-black text-xs tabular-nums text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
                 value={thresholds.sell}
-                onChange={(e) => setThresholds({ ...thresholds, sell: Number(e.target.value) })}
+                onChange={(e) => handleThresholdChange('sell', Number(e.target.value))}
               />
 
               <div className="flex-1 min-w-0 bg-red-400/10 border border-red-400/30 py-3 px-1 md:px-2 flex items-center justify-center text-center">
@@ -474,7 +572,7 @@ export default function IndicatorStudioTab({
                 type="number" step="0.1"
                 className="w-12 md:w-16 shrink-0 bg-white border border-slate-300 rounded-lg px-1 py-1 text-center font-black text-xs tabular-nums text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
                 value={thresholds.neutral}
-                onChange={(e) => setThresholds({ ...thresholds, neutral: Number(e.target.value) })}
+                onChange={(e) => handleThresholdChange('neutral', Number(e.target.value))}
               />
 
               <div className="flex-1 min-w-0 bg-slate-400/10 border border-slate-400/30 py-3 px-1 md:px-2 flex items-center justify-center text-center">
@@ -485,7 +583,7 @@ export default function IndicatorStudioTab({
                 type="number" step="0.1"
                 className="w-12 md:w-16 shrink-0 bg-white border border-slate-300 rounded-lg px-1 py-1 text-center font-black text-xs tabular-nums text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
                 value={thresholds.buy}
-                onChange={(e) => setThresholds({ ...thresholds, buy: Number(e.target.value) })}
+                onChange={(e) => handleThresholdChange('buy', Number(e.target.value))}
               />
 
               <div className="flex-1 min-w-0 bg-emerald-400/10 border border-emerald-400/30 py-3 px-1 md:px-2 flex items-center justify-center text-center">
@@ -496,7 +594,7 @@ export default function IndicatorStudioTab({
                 type="number" step="0.1"
                 className="w-12 md:w-16 shrink-0 bg-white border border-slate-300 rounded-lg px-1 py-1 text-center font-black text-xs tabular-nums text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
                 value={thresholds.strongBuy}
-                onChange={(e) => setThresholds({ ...thresholds, strongBuy: Number(e.target.value) })}
+                onChange={(e) => handleThresholdChange('strongBuy', Number(e.target.value))}
               />
 
               <div className="flex-1 min-w-0 bg-emerald-500/10 border border-emerald-500/30 rounded-r-xl py-3 px-1 md:px-2 flex items-center justify-center text-center">
@@ -545,10 +643,108 @@ export default function IndicatorStudioTab({
             >
               <Save size={24} />
               <span>지표 보관함에 저장</span>
-              <span className="text-[10px] opacity-60 font-bold tracking-tighter">{indicators.length} SAVED</span>
+              <span className="text-[10px] opacity-60 font-bold tracking-tighter">{indicators.length} / 3 SAVED</span>
             </button>
           </div>
         </div>
+      </div>
+
+      {/* ── 백테스트 패널 ── */}
+      <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">
+            <BarChart3 size={18} className="text-blue-600" />
+            백테스트
+            <span className="text-[10px] font-bold text-slate-400 ml-1">5분봉 · 최근 30일 · {altName}</span>
+          </h3>
+          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full">
+            승: ±0.5% / 대승: ±1.5% (3봉 내)
+          </span>
+        </div>
+
+        <p className="text-[11px] font-medium text-slate-500 leading-relaxed">
+          ※ 백테스트 결과는 과거 데이터에 기반한 <strong className="text-rose-500 font-bold">참고용 지표</strong>입니다. <strong className="text-rose-500 font-bold">미래 수익을 보장하지 않으며</strong>, 시장 환경·유동성·체결 미끄럼 등은 반영되지 않습니다. 단일 결과만으로 매매 결정을 내리지 마세요.
+        </p>
+
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">승패 판정 기준</p>
+          <p className="text-[11px] text-slate-600 leading-relaxed">
+            과거 5분봉을 순회하며 점수가 임계값을 만족할 때마다 신호로 카운트합니다. <strong className="text-emerald-600 font-bold">매수 신호</strong>(score ≥ Buy)는 이후 3봉(15분) 이내 봉의 <strong>고가</strong>가 신호가 대비 <strong className="text-emerald-600 font-bold">+0.5% 이상</strong>이면 <strong>승</strong>, <strong className="text-emerald-600 font-bold">+1.5% 이상</strong>이면 <strong>대승</strong>. <strong className="text-red-500 font-bold">매도 신호</strong>(score ≤ Sell)는 이후 3봉의 <strong>저가</strong>가 -0.5%/-1.5% 도달 여부를 같은 룰로 측정합니다. 대승은 승에 포함됩니다.
+          </p>
+        </div>
+
+        {usesOrderbookVars(formula) ? (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3">
+            <AlertCircle size={18} className="text-rose-500 shrink-0 mt-0.5" />
+            <p className="text-xs font-bold text-rose-600 leading-relaxed">
+              호가 변수(<code className="font-mono">TOTAL_BID</code>, <code className="font-mono">TOTAL_ASK</code>, <code className="font-mono">BID_ASK_RATIO</code>)가 포함된 수식은 과거 데이터가 없어 백테스트가 비활성화됩니다. 호가 변수를 제거하면 사용 가능합니다.
+            </p>
+          </div>
+        ) : backtestRunning ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs font-black text-slate-600">
+              <span className="flex items-center gap-2">
+                <RefreshCcw size={14} className="animate-spin text-blue-500" />
+                과거 5분봉 데이터를 받아오는 중...
+              </span>
+              <span className="tabular-nums">{Math.round(backtestProgress * 100)}%</span>
+            </div>
+            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-500 transition-all duration-200" style={{ width: `${backtestProgress * 100}%` }}></div>
+            </div>
+          </div>
+        ) : backtestResult && backtestResult.altMarket === selectedAlt ? (
+          <div className="space-y-4">
+            <p className="text-[10px] font-bold text-slate-500 tabular-nums">
+              {formatBacktestPeriod(backtestResult)}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { label: '🟢 매수 신호', data: backtestResult.buy, cardCls: 'bg-emerald-50/60 border-emerald-200', titleCls: 'text-emerald-600', emphCls: 'text-emerald-700' },
+                { label: '🔴 매도 신호', data: backtestResult.sell, cardCls: 'bg-red-50/60 border-red-200', titleCls: 'text-red-600', emphCls: 'text-red-700' },
+              ].map(({ label, data, cardCls, titleCls, emphCls }) => {
+                const winRate = data.total > 0 ? (data.wins / data.total) * 100 : 0;
+                const bigWinRate = data.total > 0 ? (data.bigWins / data.total) * 100 : 0;
+                return (
+                  <div key={label} className={`rounded-2xl p-4 border ${cardCls}`}>
+                    <p className={`text-[10px] font-black uppercase tracking-tighter mb-1 ${titleCls}`}>{label}</p>
+                    {data.total === 0 ? (
+                      <p className="text-xs font-bold text-slate-400 mt-2">신호 없음</p>
+                    ) : (
+                      <>
+                        <p className="text-3xl font-black tabular-nums text-slate-800">{winRate.toFixed(1)}%</p>
+                        <p className="text-[10px] font-bold text-slate-500 tabular-nums">승률 ({data.wins} / {data.total})</p>
+                        <p className={`text-xs font-black tabular-nums mt-1 ${emphCls}`}>
+                          대승률 {bigWinRate.toFixed(1)}% ({data.bigWins})
+                        </p>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <button onClick={handleRunBacktest} className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2">
+              <RefreshCcw size={12} /> 다시 실행
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {backtestResult && backtestResult.altMarket !== selectedAlt && (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-center">
+                <p className="text-xs font-bold text-slate-600">
+                  현재 종목(<strong className="text-blue-600">{altName}</strong>)에 대한 백테스트 결과가 없습니다.
+                </p>
+              </div>
+            )}
+            <button
+              onClick={handleRunBacktest}
+              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 active:scale-95"
+            >
+              <Play size={18} />
+              백테스트 실행 ({altName} 5분봉 30일, 약 20초)
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 커스텀 모달 */}

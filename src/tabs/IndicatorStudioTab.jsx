@@ -45,10 +45,10 @@ export default function IndicatorStudioTab({
   const { indicators, addIndicator, updateIndicator, removeIndicator } = useStudioIndicators();
 
   // ── 에디터 내부 state ──
-  const [formula, setFormula] = useState("Math.abs(BTC_RATE - ALT_RATE) * 10");
-  const [indicatorName, setIndicatorName] = useState("변동성 이격 지표");
+  const [formula, setFormula] = useState("Z_SCORE * (BID_ASK_RATIO / 100)");
+  const [indicatorName, setIndicatorName] = useState("갭-호가 동조 신호");
   const [thresholds, setThresholds] = useState({
-    strongBuy: 20, buy: 10, neutral: 5, sell: -5
+    strongBuy: 15, buy: 5, neutral: -5, sell: -15
   });
   const [selectedSavedIndicatorId, setSelectedSavedIndicatorId] = useState(null);
   const [isVarOpen, setIsVarOpen] = useState(false);

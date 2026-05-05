@@ -26,6 +26,7 @@ export function useUpbitData() {
   const [dayCandles, setDayCandles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [orderbook, setOrderbook] = useState({ totalBid: 0, totalAsk: 0, ratio: 0 });
   const [searchResults, setSearchResults] = useState([]);
 
   const searchTimeoutRef = useRef(null);
@@ -113,7 +114,28 @@ export function useUpbitData() {
     return () => { isMounted = false; if (timeoutId) clearTimeout(timeoutId); };
   }, [selectedAlt, tickers]);
 
-  // 3. 실시간 시세 업데이트 — BTC + 선택 알트만, 5초 간격
+  // 3. 호가 폴링 — 선택 종목 5초 간격
+  useEffect(() => {
+    let isMounted = true;
+    let timeoutId = null;
+    const fetchOrderbook = async () => {
+      if (!isMounted) return;
+      try {
+        const data = await safeFetch(`https://api.upbit.com/v1/orderbook?markets=${selectedAlt}`);
+        if (isMounted && data && data[0]) {
+          const totalBid = data[0].total_bid_size;
+          const totalAsk = data[0].total_ask_size;
+          const ratio = totalAsk > 0 ? (totalBid / totalAsk) * 100 : 0;
+          setOrderbook({ totalBid, totalAsk, ratio });
+        }
+      } catch (error) { }
+      finally { if (isMounted) timeoutId = setTimeout(fetchOrderbook, 5000); }
+    };
+    fetchOrderbook();
+    return () => { isMounted = false; if (timeoutId) clearTimeout(timeoutId); };
+  }, [selectedAlt]);
+
+  // 4. 실시간 시세 업데이트 — BTC + 선택 알트만, 5초 간격
   useEffect(() => {
     let isMounted = true;
     let timeoutId = null;
@@ -150,6 +172,7 @@ export function useUpbitData() {
     dayCandles,
     loading,
     lastUpdated,
+    orderbook,
     searchCoin,
     searchResults,
     clearSearch

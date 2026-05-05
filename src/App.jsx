@@ -18,6 +18,7 @@ import AnalysisTab from './tabs/AnalysisTab';
 import CustomViewTab from './tabs/CustomViewTab';
 import StockAnalysisTab from './tabs/StockAnalysisTab';
 import StockCustomViewTab from './tabs/StockCustomViewTab';
+import IndicatorStudioTab from './tabs/IndicatorStudioTab';
 
 export default function App() {
   const {
@@ -32,6 +33,7 @@ export default function App() {
     dayCandles,
     loading,
     lastUpdated,
+    orderbook,
     searchCoin,
     searchResults: coinSearchResults,
     clearSearch: clearCoinSearch
@@ -150,14 +152,18 @@ export default function App() {
           <div className="flex flex-col sm:flex-row gap-4 font-sans text-left items-end">
             {appMode === 'crypto' ? (
               <>
-                <div className="flex flex-col gap-1 text-left">
-                  <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">DROP ALERT</label>
-                  <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums text-left" value={dropThreshold} onChange={(e) => setDropThreshold(Number(e.target.value))} />
-                </div>
-                <div className="flex flex-col gap-1 text-left">
-                  <label className="text-[10px] font-black text-orange-400 px-1 uppercase tracking-tighter">Z-Score Alert</label>
-                  <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-orange-500 transition-all tabular-nums text-left" value={zScoreThreshold} onChange={(e) => setZScoreThreshold(Number(e.target.value))} />
-                </div>
+                {activeTab !== 'studio' && (
+                  <>
+                    <div className="flex flex-col gap-1 text-left">
+                      <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">DROP ALERT</label>
+                      <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums text-left" value={dropThreshold} onChange={(e) => setDropThreshold(Number(e.target.value))} />
+                    </div>
+                    <div className="flex flex-col gap-1 text-left">
+                      <label className="text-[10px] font-black text-orange-400 px-1 uppercase tracking-tighter">Z-Score Alert</label>
+                      <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-orange-500 transition-all tabular-nums text-left" value={zScoreThreshold} onChange={(e) => setZScoreThreshold(Number(e.target.value))} />
+                    </div>
+                  </>
+                )}
                 <div className="relative" ref={coinSearchRef}>
                   <div className="flex flex-col gap-1 text-left">
                     <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">Compare: {altName}</label>
@@ -266,6 +272,12 @@ export default function App() {
             className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'custom' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
             Custom View
           </button>
+          {appMode === 'crypto' && (
+            <button onClick={() => setActiveTab('studio')}
+              className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'studio' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
+              Editor
+            </button>
+          )}
         </div>
 
         {/* 탭 내용 */}
@@ -339,6 +351,22 @@ export default function App() {
             altVol={altVol}
             momentum5m={momentum5m}
             zScoreValue={zScoreValue}
+          />
+        )}
+
+        {activeTab === 'studio' && appMode === 'crypto' && (
+          <IndicatorStudioTab
+            tickers={tickers}
+            selectedAlt={selectedAlt}
+            altName={altName}
+            btcRate={btcRate}
+            altRate={altRate}
+            momentum5m={momentum5m}
+            volRatio={volRatio}
+            zScoreValue={zScoreValue}
+            candles5m={candles5m}
+            dayCandles={dayCandles}
+            orderbook={orderbook}
           />
         )}
 
@@ -535,6 +563,72 @@ export default function App() {
                   <h4 className="font-bold">설정 유지</h4>
                   <p className="text-sm text-slate-500 font-medium leading-relaxed">로컬 스토리지를 이용해 한 번 설정한 지표 구성은 앱을 껐다 켜도 그대로 유지됩니다.</p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {showInfo && activeTab === 'studio' && (
+            <div className="p-8 space-y-8 border-t border-slate-100 text-left font-sans">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                <div className="space-y-2">
+                  <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center font-black">1</div>
+                  <h4 className="font-bold">변수 선택</h4>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">시세·모멘텀·RSI·볼린저·호가 잔량·직전 5분봉 OHLCV 등 실시간 변수를 자유롭게 골라 조합합니다.</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center font-black">2</div>
+                  <h4 className="font-bold">수식 작성</h4>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">JavaScript 표현식과 Math 함수로 변수들을 결합해 나만의 점수 공식을 만듭니다. 결과는 실시간 프리뷰로 즉시 확인됩니다.</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center font-black">3</div>
+                  <h4 className="font-bold">시그널 매핑 &amp; 저장</h4>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">점수 범위에 맞춰 매수·매도 임계값을 직접 정의하고 보관함에 저장하면, 다음 접속 시에도 그대로 추적됩니다.</p>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-slate-50 space-y-4 font-sans text-left">
+                <div className="flex items-center gap-2 text-slate-800 font-bold mb-2">
+                  <BookOpen size={18} className="text-indigo-500" />
+                  <span>지표 빌더 활용 가이드 (Tip)</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
+                    <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter">Variable Combination</p>
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                      여러 변수를 함께 곱하거나 나누면 단일 지표가 잡지 못하는 <strong className="text-indigo-600 font-bold">상호작용 신호</strong>를 만들 수 있습니다. 예: <code className="font-mono bg-white px-1 rounded">Z_SCORE * VOL_RATIO</code>는 거래대금이 동반된 갭 왜곡만 부각시킵니다.
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
+                    <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter">Threshold Calibration</p>
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                      점수는 <strong className="text-amber-600 font-bold">자율 스케일링</strong>이라 0~100에 묶이지 않습니다. 며칠 동안 프리뷰 값의 분포를 관찰한 뒤, 실제로 강한 신호가 나타나는 <strong>꼬리 부분</strong>에 임계값을 두는 것이 효과적입니다.
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
+                    <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter">Reuse Existing Logic</p>
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                      Statistics 탭에서 의미 있게 본 지표(RSI 과매수/과매도, 볼린저 %B, 갭 Z-Score 등)를 변수로 재구성해보세요. 익숙한 신호의 <strong className="text-emerald-600 font-bold">조합·가중치 변형</strong>이 빠른 시작점이 됩니다.
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
+                    <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter">Persistent Library</p>
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                      저장된 지표는 로컬에 영구 보관됩니다. 카드를 클릭하면 <strong className="text-indigo-600 font-bold">하단 실시간 패널</strong>이 펼쳐져 현재 시장 상태에서의 점수와 시그널을 한눈에 확인할 수 있습니다.
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-violet-100 text-left md:col-span-2">
+                    <p className="text-xs font-black text-violet-400 mb-1 uppercase tracking-tighter">LLM Assist (수식이 막막하다면)</p>
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                      JavaScript 수식 작성이 어렵다면 <strong className="text-violet-600 font-bold">ChatGPT·Claude 같은 LLM</strong>의 도움을 받는 것도 좋은 방법입니다. 위에 나열된 변수 이름들(<code className="font-mono bg-white px-1 rounded text-[10px]">BTC_RATE</code>, <code className="font-mono bg-white px-1 rounded text-[10px]">RSI_14</code>, <code className="font-mono bg-white px-1 rounded text-[10px]">BID_ASK_RATIO</code> 등)과 본인이 검증하고 싶은 매매 아이디어(예: <em>"거래대금이 동반된 갭 왜곡일수록 강하게 점수화"</em>)를 함께 전달하면, 의도에 맞는 한 줄 수식을 받아볼 수 있습니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-indigo-50 p-4 rounded-2xl flex gap-3 items-start border border-indigo-100 text-left">
+                <ShieldCheck className="text-indigo-600 shrink-0" size={20} />
+                <p className="text-[11px] text-indigo-800 font-medium leading-tight">사용자 정의 수식은 본인의 가설을 검증하는 도구입니다. 백테스트를 거치지 않은 직관 기반 공식은 실거래 적용 전에 충분한 관찰 기간을 가지세요.</p>
               </div>
             </div>
           )}

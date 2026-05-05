@@ -45,7 +45,7 @@ export default function IndicatorStudioTab({
   const { indicators, addIndicator, updateIndicator, removeIndicator } = useStudioIndicators();
 
   // ── 에디터 내부 state ──
-  const [formula, setFormula] = useState("Z_SCORE * (BID_ASK_RATIO / 100)");
+  const [formula, setFormula] = useState("Z_SCORE * (BID_ASK_RATIO / 100) - (RSI_14 - 50) * 0.1");
   const [indicatorName, setIndicatorName] = useState("갭-호가 동조 신호");
   const [thresholds, setThresholds] = useState({
     strongBuy: 15, buy: 5, neutral: -5, sell: -15

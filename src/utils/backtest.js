@@ -144,6 +144,8 @@ export async function runBacktest({
   // 신호 감지 + forward return 평가
   const buySignals = [];
   const sellSignals = [];
+  const strongBuySignals = [];
+  const strongSellSignals = [];
 
   for (let i = bufferBars; i < altCandles.length - forwardBars; i++) {
     const altT = altCandles[i];
@@ -197,8 +199,14 @@ export async function runBacktest({
     if (value >= thresholds.buy) {
       buySignals.push({ idx: i, price: altT.trade_price });
     }
+    if (value >= thresholds.strongBuy) {
+      strongBuySignals.push({ idx: i, price: altT.trade_price });
+    }
     if (value <= thresholds.sell) {
       sellSignals.push({ idx: i, price: altT.trade_price });
+    }
+    if (value < thresholds.sell) {
+      strongSellSignals.push({ idx: i, price: altT.trade_price });
     }
   }
 
@@ -226,6 +234,8 @@ export async function runBacktest({
 
   const buy = evalSignals(buySignals, true);
   const sell = evalSignals(sellSignals, false);
+  const strongBuy = evalSignals(strongBuySignals, true);
+  const strongSell = evalSignals(strongSellSignals, false);
 
   if (onProgress) onProgress(1);
 
@@ -239,5 +249,7 @@ export async function runBacktest({
     periodEnd: altCandles[altCandles.length - 1].candle_date_time_kst,
     buy,
     sell,
+    strongBuy,
+    strongSell,
   };
 }

@@ -273,12 +273,23 @@ export default function StockEditorTab({ stockData }) {
 
   const formatBacktestRates = (bt) => {
     const fmt = (data) => {
-      if (data.total === 0) return '–';
+      if (!data || data.total === 0) return '–';
       const win = (data.wins / data.total * 100).toFixed(1);
       const big = (data.bigWins / data.total * 100).toFixed(1);
       return `${win}%(대승 ${big}%)`;
     };
     return `매수 승 ${fmt(bt.buy)} · 매도 승 ${fmt(bt.sell)}`;
+  };
+
+  const formatBacktestStrongRates = (bt) => {
+    if (!bt.strongBuy && !bt.strongSell) return null;
+    const fmt = (data) => {
+      if (!data || data.total === 0) return '–';
+      const win = (data.wins / data.total * 100).toFixed(1);
+      const big = (data.bigWins / data.total * 100).toFixed(1);
+      return `${win}%(대승 ${big}%)`;
+    };
+    return `강력 매수 ${fmt(bt.strongBuy)} · 강력 매도 ${fmt(bt.strongSell)}`;
   };
 
   const handleSaveIndicator = () => {
@@ -375,6 +386,11 @@ export default function StockEditorTab({ stockData }) {
                         <p className="text-[10px] font-bold text-rose-300 tabular-nums truncate">
                           {formatBacktestRates(ind.backtest)}
                         </p>
+                        {formatBacktestStrongRates(ind.backtest) && (
+                          <p className="text-[10px] font-bold text-rose-200 tabular-nums truncate">
+                            {formatBacktestStrongRates(ind.backtest)}
+                          </p>
+                        )}
                       </div>
                     ) : ind.backtest ? (
                       <p className="text-[10px] font-bold text-slate-500 truncate">
@@ -433,6 +449,11 @@ export default function StockEditorTab({ stockData }) {
                       <p className="text-[10px] font-bold text-rose-500 tabular-nums truncate">
                         {formatBacktestRates(ind.backtest)}
                       </p>
+                      {formatBacktestStrongRates(ind.backtest) && (
+                        <p className="text-[10px] font-bold text-rose-400 tabular-nums truncate">
+                          {formatBacktestStrongRates(ind.backtest)}
+                        </p>
+                      )}
                     </div>
                   ) : ind.backtest ? (
                     <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">
@@ -696,9 +717,11 @@ export default function StockEditorTab({ stockData }) {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
-                { label: '🟢 매수 신호', data: backtestResult.buy, cardCls: 'bg-emerald-50/60 border-emerald-200', titleCls: 'text-emerald-600', emphCls: 'text-emerald-700' },
-                { label: '🔴 매도 신호', data: backtestResult.sell, cardCls: 'bg-red-50/60 border-red-200', titleCls: 'text-red-600', emphCls: 'text-red-700' },
-              ].map(({ label, data, cardCls, titleCls, emphCls }) => {
+                { label: '🟢 매수 (전체)', data: backtestResult.buy, cardCls: 'bg-emerald-50/60 border-emerald-200', titleCls: 'text-emerald-600', emphCls: 'text-emerald-700' },
+                { label: '🔴 매도 (전체)', data: backtestResult.sell, cardCls: 'bg-red-50/60 border-red-200', titleCls: 'text-red-600', emphCls: 'text-red-700' },
+                { label: '🟢 강력 매수만', data: backtestResult.strongBuy, cardCls: 'bg-emerald-100/70 border-emerald-300', titleCls: 'text-emerald-700', emphCls: 'text-emerald-800' },
+                { label: '🔴 강력 매도만', data: backtestResult.strongSell, cardCls: 'bg-red-100/70 border-red-300', titleCls: 'text-red-700', emphCls: 'text-red-800' },
+              ].filter(({ data }) => data).map(({ label, data, cardCls, titleCls, emphCls }) => {
                 const winRate = data.total > 0 ? (data.wins / data.total) * 100 : 0;
                 const bigWinRate = data.total > 0 ? (data.bigWins / data.total) * 100 : 0;
                 return (

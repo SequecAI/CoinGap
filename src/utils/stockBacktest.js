@@ -189,6 +189,8 @@ export async function runStockBacktest({
 
   const buySignals = [];
   const sellSignals = [];
+  const strongBuySignals = [];
+  const strongSellSignals = [];
 
   for (let i = startIdx; i < stockDays.length - forwardBars; i++) {
     const T = stockDays[i];
@@ -237,8 +239,14 @@ export async function runStockBacktest({
     if (value >= thresholds.buy) {
       buySignals.push({ idx: i, price: T.close });
     }
+    if (value >= thresholds.strongBuy) {
+      strongBuySignals.push({ idx: i, price: T.close });
+    }
     if (value <= thresholds.sell) {
       sellSignals.push({ idx: i, price: T.close });
+    }
+    if (value < thresholds.sell) {
+      strongSellSignals.push({ idx: i, price: T.close });
     }
   }
 
@@ -265,6 +273,8 @@ export async function runStockBacktest({
 
   const buy = evalSignals(buySignals, true);
   const sell = evalSignals(sellSignals, false);
+  const strongBuy = evalSignals(strongBuySignals, true);
+  const strongSell = evalSignals(strongSellSignals, false);
 
   if (onProgress) onProgress(1);
 
@@ -279,5 +289,7 @@ export async function runStockBacktest({
     periodEnd: stockDays[stockDays.length - 1].date,
     buy,
     sell,
+    strongBuy,
+    strongSell,
   };
 }

@@ -373,9 +373,15 @@ function IndicatorRankCard({ post, rank }) {
       alert(`보관함이 가득 찼습니다. (최대 5개)\nEditor 탭에서 기존 지표를 삭제해주세요.`);
       return;
     }
+    const newName = post.title + " (복사됨)";
+    if (saved.some(ind => ind.name === newName)) {
+      alert(`이미 '${newName}' 이름의 지표가 보관함에 있습니다.\n이름이 중복되어 복사할 수 없습니다.`);
+      return;
+    }
+
     const newIndicator = {
       id: Date.now().toString(),
-      name: post.title + " (복사됨)",
+      name: newName,
       formula: post.formula,
       thresholds: post.thresholds,
       backtest: post.backtest,

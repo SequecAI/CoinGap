@@ -53,7 +53,15 @@ export function useAuth() {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(info),
-      }).catch((err) => console.warn('[useAuth] 유저 동기화 실패:', err));
+      })
+      .then(res => res.json())
+      .then(data => {
+        // 백엔드에 커스텀 닉네임이 저장되어 있다면 로컬 상태를 덮어씀
+        if (data.nickname && data.nickname !== info.nickname) {
+          setUserInfo(prev => prev ? { ...prev, nickname: data.nickname } : prev);
+        }
+      })
+      .catch((err) => console.warn('[useAuth] 유저 동기화 실패:', err));
 
     } catch (err) {
       console.error('[useAuth] 로그인 처리 실패:', err);

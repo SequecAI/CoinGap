@@ -225,7 +225,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 font-sans text-left items-end">
+          <div className="flex flex-col sm:flex-row gap-4 font-sans text-left items-stretch sm:items-end w-full sm:w-auto">
             {appMode === 'community' ? (
               <>{/* community 모드에서는 검색 UI 없음 */}</>
             ) : appMode === 'crypto' ? (
@@ -320,10 +320,10 @@ export default function App() {
               </div>
             )}
 
-            {/* 우측 로그인 & 토글 */}
-            <div className="flex flex-col items-end sm:items-end justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+            {/* 하단 로그인 & 토글 */}
+            <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0">
               {/* 로그인 버튼 */}
-              <div className="flex items-center justify-end gap-2 w-full sm:w-auto min-h-[40px]">
+              <div className="flex items-center gap-2 shrink-0">
                 {isLoggedIn ? (
                   <div className="flex items-center gap-2">
                     {userInfo.profileImage ? (

@@ -59,11 +59,14 @@ def handle_upsert_user(body):
 
     # 기존 유저 확인
     existing = users_table.get_item(Key={"userId": user_id}).get("Item")
+    
+    # 이미 등록된 닉네임이 있다면 유지, 없다면 구글에서 받은 닉네임 사용
+    nickname = existing.get("nickname") if existing and existing.get("nickname") else body.get("nickname", "")
 
     item = {
         "userId": user_id,
         "email": body.get("email", ""),
-        "nickname": body.get("nickname", ""),
+        "nickname": nickname,
         "profileImage": body.get("profileImage", ""),
         "updatedAt": now,
     }
@@ -74,7 +77,7 @@ def handle_upsert_user(body):
     item = remove_empty_strings(item)
     users_table.put_item(Item={**(existing or {}), **item})
 
-    return _response(200, {"message": "OK", "userId": user_id})
+    return _response(200, {"message": "OK", "userId": user_id, "nickname": nickname, "profileImage": item.get("profileImage", "")})
 
 
 # ── POST /posts (Tunneling) ──
@@ -198,6 +201,34 @@ def handle_list_posts(params):
 
     items = result.get("Items", [])
     
+    # 작성자의 최신 닉네임과 프로필 이미지 조인 (DynamoDB는 조인이 없으므로 수동 매핑)
+    if items:
+        user_ids = list(set([item.get("userId") for item in items if item.get("userId")]))
+        if user_ids:
+            try:
+                # batch_get_item은 최대 100개까지 가능 (Limit이 50이므로 안전)
+                keys = [{"userId": uid} for uid in user_ids]
+                users_res = dynamodb.batch_get_item(
+                    RequestItems={
+                        "Users": {
+                            "Keys": keys,
+                            "ProjectionExpression": "userId, nickname, profileImage"
+                        }
+                    }
+                )
+                users_map = {u.get("userId"): u for u in users_res.get("Responses", {}).get("Users", [])}
+                
+                for item in items:
+                    uid = item.get("userId")
+                    if uid in users_map:
+                        user_info = users_map[uid]
+                        if user_info.get("nickname"):
+                            item["nickname"] = user_info.get("nickname")
+                        if user_info.get("profileImage"):
+                            item["profileImage"] = user_info.get("profileImage")
+            except Exception as e:
+                print("Error joining user info:", e)
+    
     return _response(200, {"posts": items})
 
 
@@ -273,6 +304,33 @@ def handle_list_comments(params):
     )
 
     items = result.get("Items", [])
+    
+    if items:
+        user_ids = list(set([item.get("userId") for item in items if item.get("userId")]))
+        if user_ids:
+            try:
+                keys = [{"userId": uid} for uid in user_ids]
+                users_res = dynamodb.batch_get_item(
+                    RequestItems={
+                        "Users": {
+                            "Keys": keys,
+                            "ProjectionExpression": "userId, nickname, profileImage"
+                        }
+                    }
+                )
+                users_map = {u.get("userId"): u for u in users_res.get("Responses", {}).get("Users", [])}
+                
+                for item in items:
+                    uid = item.get("userId")
+                    if uid in users_map:
+                        user_info = users_map[uid]
+                        if user_info.get("nickname"):
+                            item["nickname"] = user_info.get("nickname")
+                        if user_info.get("profileImage"):
+                            item["profileImage"] = user_info.get("profileImage")
+            except Exception as e:
+                print("Error joining user info for comments:", e)
+                
     return _response(200, {"comments": items})
 
 

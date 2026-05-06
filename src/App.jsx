@@ -8,11 +8,17 @@ import {
   BookOpen,
   RefreshCcw,
   Search,
-  X
+  X,
+  User,
+  LogOut,
+  Edit2,
+  Check
 } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 import { Analytics } from '@vercel/analytics/react';
 import { useUpbitData } from './hooks/useUpbitData';
 import { useStockData, DEFAULT_STOCKS } from './hooks/useStockData';
+import { useAuth } from './hooks/useAuth';
 import DashboardTab from './tabs/DashboardTab';
 import AnalysisTab from './tabs/AnalysisTab';
 import CustomViewTab from './tabs/CustomViewTab';
@@ -21,7 +27,65 @@ import StockCustomViewTab from './tabs/StockCustomViewTab';
 import IndicatorStudioTab from './tabs/IndicatorStudioTab';
 import StockEditorTab from './tabs/StockEditorTab';
 import StockBoardTab from './tabs/StockBoardTab';
+import CommunityTab from './tabs/CommunityTab';
 import MarketBrief from './components/MarketBrief';
+
+function NicknameEditor({ userInfo, onSave }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const baseName = userInfo.nickname.split('#')[0];
+  const tag = userInfo.nickname.includes('#') ? '#' + userInfo.nickname.split('#')[1] : '';
+  const [tempName, setTempName] = useState(baseName);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+    } else {
+      setTempName(userInfo.nickname.split('#')[0]);
+    }
+  }, [isEditing, userInfo.nickname]);
+
+  const handleSave = () => {
+    if (tempName.trim() && tempName.trim() !== baseName) {
+      onSave(tempName.trim());
+    } else {
+      setTempName(baseName);
+    }
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-2 py-1">
+        <input 
+          ref={inputRef}
+          type="text" 
+          className="bg-transparent text-xs font-black text-slate-700 outline-none w-20"
+          value={tempName}
+          onChange={(e) => setTempName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+          onBlur={handleSave}
+        />
+        {tag && <span className="text-[10px] font-bold text-slate-400 -ml-1">{tag}</span>}
+        <button onMouseDown={(e) => { e.preventDefault(); handleSave(); }} className="text-emerald-500 hover:text-emerald-600 ml-1">
+          <Check size={12} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1 group cursor-pointer" onClick={() => setIsEditing(true)}>
+      <div className="flex items-baseline hidden sm:flex">
+        <span className="text-xs font-black text-slate-600 group-hover:text-indigo-600 transition-colors">
+          {baseName}
+        </span>
+        {tag && <span className="text-[10px] font-bold text-slate-400 ml-0.5">{tag}</span>}
+      </div>
+      <Edit2 size={10} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
+    </div>
+  );
+}
 
 export default function App() {
   const {
@@ -43,6 +107,7 @@ export default function App() {
   } = useUpbitData();
 
   const stockData = useStockData();
+  const { isLoggedIn, userInfo, handleLoginSuccess, logout, updateNickname } = useAuth();
 
   const [dropThreshold, setDropThreshold] = useState(2.0);
   const [zScoreThreshold, setZScoreThreshold] = useState(3.0);
@@ -81,7 +146,7 @@ export default function App() {
     localStorage.setItem('coinGap_appMode', appMode);
   }, [appMode]);
 
-  // 모드 전환 시 탭 호환성 유지 (dashboard는 코인 전용, board는 주식 전용)
+  // 모드 전환 시 탭 호환성 유지
   const handleModeSwitch = (mode) => {
     setAppMode(mode);
     if (mode === 'stock' && activeTab === 'dashboard') {
@@ -90,9 +155,10 @@ export default function App() {
     if (mode === 'crypto' && activeTab === 'board') {
       setActiveTab('analysis');
     }
+    // community 모드에서는 탭 내비게이션 불필요
   };
 
-  const isLoading = appMode === 'crypto' ? loading : stockData.loading;
+  const isLoading = appMode === 'community' ? false : (appMode === 'crypto' ? loading : stockData.loading);
   if (isLoading) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans font-medium text-slate-400">
       <div className="flex flex-col items-center gap-4 text-slate-500">
@@ -138,13 +204,14 @@ export default function App() {
         {/* 상단 헤더 */}
         <div className="flex flex-col md:flex-row md:items-center justify-between bg-white p-6 rounded-2xl shadow-sm border border-slate-100 gap-4">
           <div className="flex items-center gap-4 text-left font-sans">
-            <div className={`p-3 ${appMode === 'crypto' ? 'bg-blue-600' : 'bg-emerald-600'} text-white rounded-2xl shadow-lg ${appMode === 'crypto' ? 'shadow-blue-100' : 'shadow-emerald-100'}`}>
+            <div className={`p-3 ${appMode === 'community' ? 'bg-indigo-600' : appMode === 'crypto' ? 'bg-blue-600' : 'bg-emerald-600'} text-white rounded-2xl shadow-lg ${appMode === 'community' ? 'shadow-indigo-100' : appMode === 'crypto' ? 'shadow-blue-100' : 'shadow-emerald-100'}`}>
               <Activity size={28} />
             </div>
             <div className="text-left font-sans">
               <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none font-sans">
-                {appMode === 'crypto' ? '코인 갭 모니터' : '국내주식 모니터'}
+                {appMode === 'community' ? '커뮤니티' : appMode === 'crypto' ? '코인 갭 모니터' : '국내주식 모니터'}
               </h1>
+              {appMode !== 'community' && (
               <div className="flex items-center gap-2 text-slate-400 mt-1">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -154,11 +221,14 @@ export default function App() {
                   {(appMode === 'crypto' ? lastUpdated : stockData.lastUpdated).toLocaleTimeString()} 업데이트
                 </p>
               </div>
+              )}
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 font-sans text-left items-end">
-            {appMode === 'crypto' ? (
+            {appMode === 'community' ? (
+              <>{/* community 모드에서는 검색 UI 없음 */}</>
+            ) : appMode === 'crypto' ? (
               <>
                 {activeTab !== 'studio' && (
                   <>
@@ -250,6 +320,32 @@ export default function App() {
               </div>
             )}
 
+            {/* 로그인 버튼 */}
+            <div className="flex items-center gap-2">
+              {isLoggedIn ? (
+                <div className="flex items-center gap-2">
+                  {userInfo.profileImage ? (
+                    <img src={userInfo.profileImage} alt="" className="w-8 h-8 rounded-full border-2 border-slate-200" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center"><User size={16} className="text-indigo-500" /></div>
+                  )}
+                  <NicknameEditor userInfo={userInfo} onSave={updateNickname} />
+                  <button onClick={logout} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-all" title="로그아웃">
+                    <LogOut size={16} />
+                  </button>
+                </div>
+              ) : (
+                <GoogleLogin
+                  onSuccess={handleLoginSuccess}
+                  onError={() => console.warn('Google 로그인 실패')}
+                  size="small"
+                  shape="pill"
+                  text="signin"
+                  theme="outline"
+                />
+              )}
+            </div>
+
             {/* 모드 토글 (우측 고정) */}
             <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
               <button onClick={() => handleModeSwitch('crypto')}
@@ -260,14 +356,19 @@ export default function App() {
                 className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'stock' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                 🇰🇷 주식
               </button>
+              <button onClick={() => handleModeSwitch('community')}
+                className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'community' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                📋 게시판
+              </button>
             </div>
           </div>
         </div>
 
-        {/* 시황 브리프 (collapsible, 헤더 직후 고정 위치) */}
-        <MarketBrief appMode={appMode} />
+        {/* 시황 브리프 (collapsible, 헤더 직후 고정 위치) — community 모드에서는 숨김 */}
+        {appMode !== 'community' && <MarketBrief appMode={appMode} />}
 
-        {/* 탭 내비게이션 */}
+        {/* 탭 내비게이션 — community 모드에서는 숨김 */}
+        {appMode !== 'community' && (
         <div className="flex gap-2 bg-slate-200/50 p-1.5 rounded-2xl">
           {appMode === 'crypto' && (
             <button onClick={() => setActiveTab('dashboard')}
@@ -294,6 +395,7 @@ export default function App() {
             </button>
           )}
         </div>
+        )}
 
         {/* 탭 내용 */}
         {activeTab === 'dashboard' && (
@@ -392,6 +494,11 @@ export default function App() {
 
         {activeTab === 'board' && appMode === 'stock' && <StockBoardTab />}
 
+        {/* 커뮤니티 모드 */}
+        {appMode === 'community' && (
+          <CommunityTab isLoggedIn={isLoggedIn} userInfo={userInfo} />
+        )}
+
 
         {activeTab === 'custom' && appMode === 'stock' && (
           <StockCustomViewTab
@@ -414,7 +521,7 @@ export default function App() {
         )}
 
         {/* 알림 메시지 - 코인 모드에서만 표시 */}
-        {appMode === 'crypto' && (currentDropMagnitude >= dropThreshold || currentZScoreMagnitude >= zScoreThreshold) && (
+        {appMode === 'crypto' && appMode !== 'community' && (currentDropMagnitude >= dropThreshold || currentZScoreMagnitude >= zScoreThreshold) && (
           <div className="bg-red-600 text-white p-5 rounded-3xl flex items-center justify-between animate-pulse shadow-xl shadow-red-200 border-2 border-red-500 font-sans">
             <div className="flex items-center gap-4 text-left">
               <Bell size={24} className="shrink-0" />
@@ -436,8 +543,8 @@ export default function App() {
           </div>
         )}
 
-        {/* 정보성 섹션 — board 탭에선 자체 콘텐츠라 숨김 */}
-        {activeTab !== 'board' && (
+        {/* 정보성 섹션 — board/community에선 숨김 */}
+        {activeTab !== 'board' && appMode !== 'community' && (
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mt-12 text-left font-sans">
           <button onClick={() => setShowInfo(!showInfo)} className="w-full p-6 flex items-center justify-between bg-slate-50/50 hover:bg-slate-50 transition-colors">
             <div className="flex items-center gap-3 font-sans">

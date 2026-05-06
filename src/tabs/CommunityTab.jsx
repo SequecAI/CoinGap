@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  MessageSquare, Trophy, PenLine, Send, RefreshCcw, LogIn, User,
+  MessageSquare, Trophy, PenLine, Send, RefreshCcw, LogIn, User, Eye,
   ThumbsUp, ChevronDown, ChevronUp, AlertCircle, BarChart3, ShieldCheck, Search
 } from 'lucide-react';
 import { useCommunity } from '../hooks/useCommunity';
@@ -226,13 +226,24 @@ function CommentSection({ postId, userInfo, fetchComments, createComment, update
 }
 
 // ── 자유게시판 카드 ──
-function FreePostCard({ post, userInfo, onUpdate, onDelete, commentActions }) {
+function FreePostCard({ post, userInfo, onUpdate, onDelete, commentActions, onIncrementViews }) {
   const [expanded, setExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(post.title);
   const [editContent, setEditContent] = useState(post.content);
+  const [localViews, setLocalViews] = useState(post.views || 0);
+  const [hasViewed, setHasViewed] = useState(false);
 
   const isAuthor = userInfo?.userId === post.userId;
+
+  const handleExpand = () => {
+    if (!expanded && !hasViewed) {
+      setLocalViews(v => v + 1);
+      setHasViewed(true);
+      if (onIncrementViews) onIncrementViews(post.PK, post.SK);
+    }
+    setExpanded(!expanded);
+  };
 
   const handleUpdate = async () => {
     if (!editTitle.trim()) return;
@@ -275,16 +286,18 @@ function FreePostCard({ post, userInfo, onUpdate, onDelete, commentActions }) {
 
   return (
     <article className={`p-5 border-2 rounded-2xl transition-all ${expanded ? 'border-indigo-400 bg-indigo-50/30 shadow-md' : 'border-slate-100 bg-white hover:border-indigo-300'}`}>
-      <div onClick={() => setExpanded(!expanded)} className="cursor-pointer">
+      <div onClick={handleExpand} className="cursor-pointer">
         <div className="flex items-center justify-between mb-3 gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            {post.profileImage
-              ? <img src={post.profileImage} alt="" className="w-7 h-7 rounded-full border border-slate-200 shrink-0" referrerPolicy="no-referrer" />
-              : <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center shrink-0"><User size={14} className="text-slate-400" /></div>}
             <div className="text-xs font-black text-slate-600 truncate">{renderNickname(post.nickname)}</div>
             <span className="text-[10px] font-bold text-slate-400 tabular-nums shrink-0">{timeAgo(post.createdAt)}</span>
           </div>
-          {expanded ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+              <Eye size={12} /> <span className="tabular-nums">{localViews}</span>
+            </div>
+            {expanded ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+          </div>
         </div>
         <h4 className="text-base font-black text-slate-900 mb-2 leading-tight">{post.title}</h4>
         <p className={`text-sm text-slate-600 font-medium leading-relaxed whitespace-pre-line ${expanded ? '' : 'line-clamp-2'}`}>{post.content}</p>
@@ -647,7 +660,7 @@ export default function CommunityTab({ isLoggedIn, userInfo }) {
   const [subTab, setSubTab] = useState('indicator');
   const { 
     posts, isLoading, error, 
-    fetchPosts, createPost, updatePost, deletePost,
+    fetchPosts, createPost, updatePost, deletePost, incrementViews,
     fetchComments, createComment, updateComment, deleteComment
   } = useCommunity();
 
@@ -804,6 +817,7 @@ export default function CommunityTab({ isLoggedIn, userInfo }) {
                     userInfo={userInfo}
                     onUpdate={handleUpdatePost}
                     onDelete={handleDeletePost}
+                    onIncrementViews={incrementViews}
                     commentActions={commentActions}
                   />
                 ))}

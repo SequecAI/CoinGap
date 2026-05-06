@@ -126,9 +126,21 @@ export function useCommunity() {
     }
   }, []);
 
+  const incrementViews = useCallback(async (pk, sk) => {
+    try {
+      fetch(`${API_BASE}/posts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'increment_views', PK: pk, SK: sk }),
+      }).catch(err => console.error('[useCommunity] incrementViews background error:', err));
+    } catch (err) {
+      // ignore
+    }
+  }, []);
+
   return {
     posts, isLoading, error,
-    fetchPosts, createPost, updatePost, deletePost,
+    fetchPosts, createPost, updatePost, deletePost, incrementViews,
     fetchComments, createComment, updateComment, deleteComment
   };
 }

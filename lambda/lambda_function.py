@@ -127,6 +127,21 @@ def handle_post_actions(body):
         except Exception as e:
             return _response(500, {"error": str(e)})
 
+    if action == "increment_views":
+        pk = body.get("PK")
+        sk = body.get("SK")
+        if not pk or not sk:
+            return _response(400, {"error": "Missing PK or SK"})
+        try:
+            community_table.update_item(
+                Key={"PK": pk, "SK": sk},
+                UpdateExpression="SET views = if_not_exists(views, :zero) + :inc",
+                ExpressionAttributeValues={":inc": 1, ":zero": 0}
+            )
+            return _response(200, {"message": "Views incremented"})
+        except Exception as e:
+            return _response(500, {"error": str(e)})
+
     # action == "create"
     post_type = body.get("type")  # "free" | "indicator"
     user_id = body.get("userId")
@@ -153,6 +168,7 @@ def handle_post_actions(body):
         "title": title,
         "content": body.get("content", ""),
         "likes": 0,
+        "views": 0,
         "createdAt": now,
     }
 

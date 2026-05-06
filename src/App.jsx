@@ -358,7 +358,7 @@ export default function App() {
               </button>
               <button onClick={() => handleModeSwitch('community')}
                 className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'community' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                📋 게시판
+                📋 커뮤니티
               </button>
             </div>
           </div>

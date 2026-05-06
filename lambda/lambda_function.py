@@ -170,7 +170,12 @@ def handle_post_actions(body):
 
     # DB에서 최신 사용자 정보 확보 (닉네임·프로필)
     user_record = users_table.get_item(Key={"userId": user_id}).get("Item") or {}
-    nickname = user_record.get("nickname", body.get("nickname", ""))
+    
+    if user_record.get("email") == "adminsequenceai@gmail.com" or body.get("email") == "adminsequenceai@gmail.com":
+        nickname = "관리자"
+    else:
+        nickname = user_record.get("nickname", body.get("nickname", ""))
+        
     profile_image = user_record.get("profileImage", body.get("profileImage", ""))
     item = {
         "PK": f"POST#{post_type}",
@@ -228,8 +233,11 @@ def handle_list_posts(params):
                     uid = item.get("userId")
                     if uid in users_map:
                         user_info = users_map[uid]
-                        if user_info.get("nickname"):
+                        if user_info.get("email") == "adminsequenceai@gmail.com":
+                            item["nickname"] = "관리자"
+                        elif user_info.get("nickname"):
                             item["nickname"] = user_info.get("nickname")
+                        
                         if user_info.get("profileImage"):
                             item["profileImage"] = user_info.get("profileImage")
             except Exception as e:
@@ -325,8 +333,11 @@ def handle_list_comments(params):
                     uid = item.get("userId")
                     if uid in users_map:
                         user_info = users_map[uid]
-                        if user_info.get("nickname"):
+                        if user_info.get("email") == "adminsequenceai@gmail.com":
+                            item["nickname"] = "관리자"
+                        elif user_info.get("nickname"):
                             item["nickname"] = user_info.get("nickname")
+                            
                         if user_info.get("profileImage"):
                             item["profileImage"] = user_info.get("profileImage")
             except Exception as e:

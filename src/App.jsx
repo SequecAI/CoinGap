@@ -321,9 +321,9 @@ export default function App() {
             )}
 
             {/* 우측 로그인 & 토글 */}
-            <div className="flex flex-col items-end gap-3 shrink-0">
+            <div className="flex flex-col items-end sm:items-end justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0">
               {/* 로그인 버튼 */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-end gap-2 w-full sm:w-auto min-h-[40px]">
                 {isLoggedIn ? (
                   <div className="flex items-center gap-2">
                     {userInfo.profileImage ? (

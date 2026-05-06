@@ -339,7 +339,7 @@ function BacktestBadge({ backtest }) {
 }
 
 // ── 지표 랭킹 카드 ──
-function IndicatorRankCard({ post, rank }) {
+function IndicatorRankCard({ post, rank, isLoggedIn }) {
   const [expanded, setExpanded] = useState(false);
   const avg = calcAvgWinRate(post.backtest);
   const medalColors = ['bg-amber-400 text-white', 'bg-slate-400 text-white', 'bg-amber-700 text-white'];
@@ -367,6 +367,10 @@ function IndicatorRankCard({ post, rank }) {
 
   const handleCopyIndicator = (e) => {
     e.stopPropagation();
+    if (!isLoggedIn) {
+      alert('로그인이 필요한 기능입니다.\n상단의 Google 로그인 버튼을 눌러주세요.');
+      return;
+    }
     const storageKey = post.indicatorMode === 'stock' ? STOCK_STORAGE_KEY : CRYPTO_STORAGE_KEY;
     const saved = readLocalIndicators(storageKey);
     if (saved.length >= 5) {
@@ -761,7 +765,7 @@ export default function CommunityTab({ isLoggedIn, userInfo }) {
             {isLoading && posts.length === 0 ? (
               <div className="py-4 text-center text-xs font-bold text-slate-400">불러오는 중...</div>
             ) : rankedPosts.length > 0 ? (
-              rankedPosts.map((p, i) => <IndicatorRankCard key={p.postId} post={p} rank={i + 1} />)
+              rankedPosts.map((p, i) => <IndicatorRankCard key={p.postId} post={p} rank={i + 1} isLoggedIn={isLoggedIn} />)
             ) : (
               <div className="py-4 text-center text-xs font-bold text-slate-400">랭킹 데이터가 없습니다.</div>
             )}

@@ -163,9 +163,7 @@ function CommentSection({ postId, userInfo, fetchComments, createComment, update
           
           return (
             <div key={c.commentId} className="flex gap-2.5">
-              {c.profileImage
-                ? <img src={c.profileImage} alt="" className="w-6 h-6 rounded-full border border-slate-200 shrink-0 mt-0.5" referrerPolicy="no-referrer" />
-                : <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center shrink-0 mt-0.5"><User size={12} className="text-slate-400" /></div>}
+
               <div className="flex-1 min-w-0 bg-white/50 rounded-xl p-2.5 border border-slate-100">
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <div className="text-[11px] font-black text-slate-700 truncate">{renderNickname(c.nickname)}</div>
@@ -199,9 +197,7 @@ function CommentSection({ postId, userInfo, fetchComments, createComment, update
       {/* 댓글 작성 폼 */}
       {userInfo ? (
         <div className="flex gap-2">
-          {userInfo.profileImage
-            ? <img src={userInfo.profileImage} alt="" className="w-8 h-8 rounded-full border border-slate-200 shrink-0" referrerPolicy="no-referrer" />
-            : <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center shrink-0"><User size={14} className="text-slate-400" /></div>}
+
           <div className="flex-1 flex gap-2">
             <input 
               type="text" 
@@ -401,9 +397,7 @@ function IndicatorRankCard({ post, rank, isLoggedIn }) {
       <div className="flex items-center justify-between mb-3 gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${medalBg}`}>{rank}</div>
-          {post.profileImage
-            ? <img src={post.profileImage} alt="" className="w-7 h-7 rounded-full border border-slate-200 shrink-0" referrerPolicy="no-referrer" />
-            : <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center shrink-0"><User size={14} className="text-slate-400" /></div>}
+
           <div className="text-xs font-black text-slate-600 truncate">{renderNickname(post.nickname)}</div>
           <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">{modeLabel}</span>
         </div>

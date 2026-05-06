@@ -321,9 +321,9 @@ export default function App() {
             )}
 
             {/* 하단 로그인 & 토글 */}
-            <div className="flex flex-col sm:flex-row items-end sm:items-end justify-end sm:justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+            <div className="flex flex-col sm:flex-row items-center sm:items-end justify-center sm:justify-end gap-4 w-full sm:w-auto mt-2 sm:mt-0">
               {/* 로그인 버튼 */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex justify-center sm:justify-end w-full sm:w-auto shrink-0 min-w-[200px]">
                 {isLoggedIn ? (
                   <div className="flex items-center gap-2">
                     {userInfo.profileImage ? (
@@ -337,14 +337,16 @@ export default function App() {
                     </button>
                   </div>
                 ) : (
-                  <GoogleLogin
-                    onSuccess={handleLoginSuccess}
-                    onError={() => console.warn('Google 로그인 실패')}
-                    size="small"
-                    shape="pill"
-                    text="signin"
-                    theme="outline"
-                  />
+                  <div className="w-full flex justify-center sm:justify-end">
+                    <GoogleLogin
+                      onSuccess={handleLoginSuccess}
+                      onError={() => console.warn('Google 로그인 실패')}
+                      size="medium"
+                      shape="pill"
+                      text="signin"
+                      theme="outline"
+                    />
+                  </div>
                 )}
               </div>
 

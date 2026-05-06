@@ -320,46 +320,49 @@ export default function App() {
               </div>
             )}
 
-            {/* 로그인 버튼 */}
-            <div className="flex items-center gap-2">
-              {isLoggedIn ? (
-                <div className="flex items-center gap-2">
-                  {userInfo.profileImage ? (
-                    <img src={userInfo.profileImage} alt="" className="w-8 h-8 rounded-full border-2 border-slate-200" referrerPolicy="no-referrer" />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center"><User size={16} className="text-indigo-500" /></div>
-                  )}
-                  <NicknameEditor userInfo={userInfo} onSave={updateNickname} />
-                  <button onClick={logout} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-all" title="로그아웃">
-                    <LogOut size={16} />
-                  </button>
-                </div>
-              ) : (
-                <GoogleLogin
-                  onSuccess={handleLoginSuccess}
-                  onError={() => console.warn('Google 로그인 실패')}
-                  size="small"
-                  shape="pill"
-                  text="signin"
-                  theme="outline"
-                />
-              )}
-            </div>
+            {/* 우측 로그인 & 토글 */}
+            <div className="flex flex-col items-end gap-3 shrink-0">
+              {/* 로그인 버튼 */}
+              <div className="flex items-center gap-2">
+                {isLoggedIn ? (
+                  <div className="flex items-center gap-2">
+                    {userInfo.profileImage ? (
+                      <img src={userInfo.profileImage} alt="" className="w-8 h-8 rounded-full border-2 border-slate-200" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center"><User size={16} className="text-indigo-500" /></div>
+                    )}
+                    <NicknameEditor userInfo={userInfo} onSave={updateNickname} />
+                    <button onClick={logout} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-all" title="로그아웃">
+                      <LogOut size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <GoogleLogin
+                    onSuccess={handleLoginSuccess}
+                    onError={() => console.warn('Google 로그인 실패')}
+                    size="small"
+                    shape="pill"
+                    text="signin"
+                    theme="outline"
+                  />
+                )}
+              </div>
 
-            {/* 모드 토글 (우측 고정) */}
-            <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
-              <button onClick={() => handleModeSwitch('crypto')}
-                className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'crypto' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                ₿ 코인
-              </button>
-              <button onClick={() => handleModeSwitch('stock')}
-                className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'stock' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                🇰🇷 주식
-              </button>
-              <button onClick={() => handleModeSwitch('community')}
-                className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'community' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                📋 커뮤니티
-              </button>
+              {/* 모드 토글 (우측 고정) */}
+              <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+                <button onClick={() => handleModeSwitch('crypto')}
+                  className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'crypto' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                  ₿ 코인
+                </button>
+                <button onClick={() => handleModeSwitch('stock')}
+                  className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'stock' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                  🇰🇷 주식
+                </button>
+                <button onClick={() => handleModeSwitch('community')}
+                  className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'community' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                  📋 커뮤니티
+                </button>
+              </div>
             </div>
           </div>
         </div>

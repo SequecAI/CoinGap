@@ -374,14 +374,14 @@ function IndicatorRankCard({ post, rank }) {
       return;
     }
     const newIndicator = {
-      id: Date.now(),
+      id: Date.now().toString(),
       name: post.title + " (복사됨)",
       formula: post.formula,
       thresholds: post.thresholds,
       backtest: post.backtest,
       createdAt: new Date().toISOString()
     };
-    localStorage.setItem(storageKey, JSON.stringify([...saved, newIndicator]));
+    localStorage.setItem(storageKey, JSON.stringify({ indicators: [...saved, newIndicator] }));
     alert('보관함에 지표가 복사되었습니다! Editor 탭에서 확인하세요.');
   };
 

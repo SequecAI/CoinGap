@@ -10,7 +10,11 @@ export function useStockStudioIndicators() {
   const [state, setState] = useState(() => {
     try {
       const item = window.localStorage.getItem(STORAGE_KEY);
-      return item ? JSON.parse(item) : DEFAULT_STATE;
+      if (!item) return DEFAULT_STATE;
+      const parsed = JSON.parse(item);
+      // 복사하기 버그로 인해 배열이 저장되었던 경우 복구
+      if (Array.isArray(parsed)) return { indicators: parsed };
+      return parsed.indicators ? parsed : DEFAULT_STATE;
     } catch (error) {
       console.warn('Error reading localStorage', error);
       return DEFAULT_STATE;

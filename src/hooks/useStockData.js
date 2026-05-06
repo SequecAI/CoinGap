@@ -93,9 +93,10 @@ export function useStockData() {
         if (isMounted) {
           if (basicRes && basicRes.stockName) {
             setStockBasic(basicRes);
-            setLoading(false);
             setLastUpdated(new Date());
           }
+          setLoading(false); // 항상 로딩 상태 해제
+          
           if (kospiRes) setKospiData(kospiRes);
           if (kosdaqRes) setKosdaqData(kosdaqRes);
 

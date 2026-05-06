@@ -60,8 +60,13 @@ def handle_upsert_user(body):
     # 기존 유저 확인
     existing = users_table.get_item(Key={"userId": user_id}).get("Item")
     
-    # 이미 등록된 닉네임이 있다면 유지, 없다면 구글에서 받은 닉네임 사용
-    nickname = existing.get("nickname") if existing and existing.get("nickname") else body.get("nickname", "")
+    action = body.get("action", "login")
+    
+    # 로그인 액션이면서 이미 등록된 닉네임이 있다면 유지, 아니라면(닉네임 변경 등) body에서 받은 닉네임 사용
+    if action == "login" and existing and existing.get("nickname"):
+        nickname = existing.get("nickname")
+    else:
+        nickname = body.get("nickname", "")
 
     item = {
         "userId": user_id,

@@ -37,6 +37,8 @@ export function useAuth() {
       if (payload.email !== 'adminsequenceai@gmail.com') {
         const uniqueCode = payload.sub.slice(-4);
         nickname = `${baseNickname}#${uniqueCode}`;
+      } else {
+        nickname = '관리자';
       }
 
       const info = {
@@ -44,6 +46,7 @@ export function useAuth() {
         email: payload.email,
         nickname: nickname,
         profileImage: payload.picture || '',
+        action: 'login'
       };
 
       setUserInfo(info);
@@ -79,8 +82,10 @@ export function useAuth() {
       const uniqueCode = userInfo.userId.slice(-4);
       const baseName = finalNickname.split('#')[0];
       finalNickname = `${baseName}#${uniqueCode}`;
+    } else {
+      finalNickname = '관리자';
     }
-    const updated = { ...userInfo, nickname: finalNickname };
+    const updated = { ...userInfo, nickname: finalNickname, action: 'update_nickname' };
     setUserInfo(updated);
     fetch(`${API_BASE}/users`, {
       method: 'POST',

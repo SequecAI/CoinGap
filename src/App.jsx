@@ -484,7 +484,7 @@ export default function App() {
                   <div className="bg-slate-50 p-4 rounded-2xl border border-red-100 text-left md:col-span-2">
                     <p className="text-xs font-black text-red-400 mb-1 uppercase tracking-tighter">Dual Signal Alert (Extreme Signal)</p>
                     <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                      Drop Alert(단기 모멘텀)와 Z-Score Alert(통계적 왜곡)가 <strong className="text-red-600 font-bold">동시에</strong> 작동한다면, 이는 시장의 탄력이 한계치에 도달했다는 강력한 증거입니다. 이 경우 해당 지점이 단기 <strong className="text-red-600 font-bold underline decoration-red-200 underline-offset-4">고점</strong> 또는 <strong className="text-blue-600 font-bold underline decoration-blue-200 underline-offset-2 font-sans">저점</strong>의 신호일 확률이 매우 높으므로 <strong>반전 매매(Mean Reversion)</strong> 전략을 고려해볼 수 있습니다.
+                      Drop Alert(단기 모멘텀)와 Z-Score Alert(통계적 왜곡)가 <strong className="text-red-600 font-bold">동시에</strong> 작동한다면, 이는 시장의 탄력이 한계치에 도달했다는 강력한 증거입니다. 이 경우 해당 지점이 단기 <strong className="text-red-600 font-bold underline decoration-red-200 underline-offset-4">고점</strong> 또는 <strong className="text-blue-600 font-bold underline decoration-blue-200 underline-offset-2 font-sans">저점</strong>의 신호일 확률이 매우 높으므로 <strong>평균 회귀(Mean Reversion)</strong> 관점을 고려해볼 수 있습니다.
                     </p>
                   </div>
                 </div>
@@ -508,7 +508,7 @@ export default function App() {
                 <div className="space-y-2">
                   <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center font-black">2</div>
                   <h4 className="font-bold">시그널 점수</h4>
-                  <p className="text-sm text-slate-500 font-medium leading-relaxed">RSI, 볼린저 밴드 등 4가지 지표를 하나의 점수로 압축하여 직관적인 매매 기준을 제공합니다.</p>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">RSI, 볼린저 밴드 등 4가지 지표를 하나의 점수로 압축하여 직관적인 판단 기준을 제공합니다.</p>
                 </div>
                 <div className="space-y-2">
                   <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center font-black">3</div>
@@ -526,7 +526,7 @@ export default function App() {
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
                     <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-tighter">Bollinger Bands & RSI</p>
                     <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                      볼린저 밴드 하단을 이탈(%B &lt; 0)하면서 RSI가 30 이하의 <strong className="text-blue-600 font-bold underline decoration-blue-200 underline-offset-2">과매도</strong> 상태일 때는 반등을 노린 매수 관점으로 접근하기 좋습니다.
+                      볼린저 밴드 하단을 이탈(%B &lt; 0)하면서 RSI가 30 이하의 <strong className="text-blue-600 font-bold underline decoration-blue-200 underline-offset-2">과매도</strong> 영역일 때는 반등 가능성을 체크하기 좋습니다.
                     </p>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
@@ -538,7 +538,7 @@ export default function App() {
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left md:col-span-2">
                     <p className="text-xs font-black text-violet-400 mb-1 uppercase tracking-tighter">Signal Score (종합 시그널)</p>
                     <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                      0부터 100까지의 수치로 나타나는 종합 시그널 점수는 <strong className="text-emerald-600 font-bold">높을수록 강한 매수 신호(저평가/반등 예상)</strong>를, <strong className="text-red-600 font-bold">낮을수록 강한 매도 신호(과열/하락 예상)</strong>를 의미합니다. 다중 지표의 교집합이 발생할 때 점수가 극단으로 치우치며, 이는 확률 높은 트레이딩 시점을 시사합니다.
+                      0부터 100까지의 수치로 나타나는 종합 시그널 점수는 <strong className="text-emerald-600 font-bold">높을수록 저평가 신호(반등 가능성)</strong>를, <strong className="text-red-600 font-bold">낮을수록 고평가 신호(과열/하락 가능성)</strong>를 의미합니다. 다중 지표의 교집합이 발생할 때 점수가 극단으로 치우치며, 이는 통계적으로 의미 있는 관찰 시점을 시사합니다.
                     </p>
                   </div>
                 </div>
@@ -562,7 +562,7 @@ export default function App() {
                 <div className="space-y-2">
                   <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center font-black">2</div>
                   <h4 className="font-bold">커스텀 시그널 점수</h4>
-                  <p className="text-sm text-slate-500 font-medium leading-relaxed">활성화된 지표들만을 1:1 비율로 평균내어 현재 내 전략에 맞는 매매 시그널을 산출합니다.</p>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">활성화된 지표들만을 1:1 비율로 평균내어 현재 내 전략에 맞는 시그널 점수를 산출합니다.</p>
                 </div>
                 <div className="space-y-2">
                   <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center font-black">3</div>
@@ -589,7 +589,7 @@ export default function App() {
                 <div className="space-y-2">
                   <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center font-black">3</div>
                   <h4 className="font-bold">시그널 매핑 &amp; 저장</h4>
-                  <p className="text-sm text-slate-500 font-medium leading-relaxed">점수 범위에 맞춰 매수·매도 임계값을 직접 정의하고 보관함에 저장하면, 다음 접속 시에도 그대로 추적됩니다.</p>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">점수 범위에 맞춰 저평가·고평가 임계값을 직접 정의하고 보관함에 저장하면, 다음 접속 시에도 그대로 추적됩니다.</p>
                 </div>
               </div>
 
@@ -626,7 +626,7 @@ export default function App() {
                   <div className="bg-slate-50 p-4 rounded-2xl border border-violet-100 text-left md:col-span-2">
                     <p className="text-xs font-black text-violet-400 mb-1 uppercase tracking-tighter">LLM Assist (수식이 막막하다면)</p>
                     <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                      JavaScript 수식 작성이 어렵다면 <strong className="text-violet-600 font-bold">ChatGPT·Claude 같은 LLM</strong>의 도움을 받는 것도 좋은 방법입니다. 위에 나열된 변수 이름들(<code className="font-mono bg-white px-1 rounded text-[10px]">BTC_RATE</code>, <code className="font-mono bg-white px-1 rounded text-[10px]">RSI_14</code>, <code className="font-mono bg-white px-1 rounded text-[10px]">BID_ASK_RATIO</code> 등)과 본인이 검증하고 싶은 매매 아이디어(예: <em>"거래대금이 동반된 갭 왜곡일수록 강하게 점수화"</em>)를 함께 전달하면, 의도에 맞는 한 줄 수식을 받아볼 수 있습니다.
+                      JavaScript 수식 작성이 어렵다면 <strong className="text-violet-600 font-bold">ChatGPT·Claude 같은 LLM</strong>의 도움을 받는 것도 좋은 방법입니다. 위에 나열된 변수 이름들(<code className="font-mono bg-white px-1 rounded text-[10px]">BTC_RATE</code>, <code className="font-mono bg-white px-1 rounded text-[10px]">RSI_14</code>, <code className="font-mono bg-white px-1 rounded text-[10px]">BID_ASK_RATIO</code> 등)과 본인이 검증하고 싶은 분석 아이디어(예: <em>"거래대금이 동반된 갭 왜곡일수록 강하게 점수화"</em>)를 함께 전달하면, 의도에 맞는 한 줄 수식을 받아볼 수 있습니다.
                     </p>
                   </div>
                 </div>

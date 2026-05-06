@@ -481,10 +481,10 @@ export function calcSignalScore(rsi, bb, momentum5m, candles) {
 
 export function SignalScorePanel({ score }) {
   const getLabel = (s) => {
-    if (s >= 85) return { text: 'Strong Buy', color: '#10b981', bg: 'bg-emerald-500/10', tc: 'text-emerald-500', bc: 'border-emerald-500/30' };
-    if (s >= 65) return { text: 'Buy', color: '#34d399', bg: 'bg-emerald-400/10', tc: 'text-emerald-400', bc: 'border-emerald-400/30' };
-    if (s <= 15) return { text: 'Strong Sell', color: '#ef4444', bg: 'bg-red-500/10', tc: 'text-red-500', bc: 'border-red-500/30' };
-    if (s <= 35) return { text: 'Sell', color: '#f87171', bg: 'bg-red-400/10', tc: 'text-red-400', bc: 'border-red-400/30' };
+    if (s >= 85) return { text: 'Highly Undervalued', color: '#10b981', bg: 'bg-emerald-500/10', tc: 'text-emerald-500', bc: 'border-emerald-500/30' };
+    if (s >= 65) return { text: 'Undervalued', color: '#34d399', bg: 'bg-emerald-400/10', tc: 'text-emerald-400', bc: 'border-emerald-400/30' };
+    if (s <= 15) return { text: 'Highly Overvalued', color: '#ef4444', bg: 'bg-red-500/10', tc: 'text-red-500', bc: 'border-red-500/30' };
+    if (s <= 35) return { text: 'Overvalued', color: '#f87171', bg: 'bg-red-400/10', tc: 'text-red-400', bc: 'border-red-400/30' };
     return { text: 'Neutral', color: '#94a3b8', bg: 'bg-slate-400/10', tc: 'text-slate-400', bc: 'border-slate-400/30' };
   };
   const label = getLabel(score);
@@ -562,7 +562,7 @@ export default function AnalysisTab({
               <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Signal Score</h3>
             </div>
             <p className="text-xs text-slate-500 font-medium mb-3">
-              RSI, 볼린저, 모멘텀, 체결강도를 종합한 <span className="text-violet-600 font-bold">매수/매도 신호</span>입니다.
+              RSI, 볼린저, 모멘텀, 체결강도를 종합한 <span className="text-violet-600 font-bold">저평가/고평가 신호</span>입니다.
             </p>
             <SignalScorePanel score={signal.score} />
           </div>

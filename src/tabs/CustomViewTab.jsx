@@ -203,10 +203,10 @@ export default function CustomViewTab({
   const finalScore = calcCustomScore();
 
   const getLabel = (s) => {
-    if (s >= 85) return { text: 'Strong Buy', color: '#10b981', bg: 'bg-emerald-500/10', tc: 'text-emerald-500', bc: 'border-emerald-500/30' };
-    if (s >= 65) return { text: 'Buy', color: '#34d399', bg: 'bg-emerald-400/10', tc: 'text-emerald-400', bc: 'border-emerald-400/30' };
-    if (s <= 15) return { text: 'Strong Sell', color: '#ef4444', bg: 'bg-red-500/10', tc: 'text-red-500', bc: 'border-red-500/30' };
-    if (s <= 35) return { text: 'Sell', color: '#f87171', bg: 'bg-red-400/10', tc: 'text-red-400', bc: 'border-red-400/30' };
+    if (s >= 85) return { text: 'Highly Undervalued', color: '#10b981', bg: 'bg-emerald-500/10', tc: 'text-emerald-500', bc: 'border-emerald-500/30' };
+    if (s >= 65) return { text: 'Undervalued', color: '#34d399', bg: 'bg-emerald-400/10', tc: 'text-emerald-400', bc: 'border-emerald-400/30' };
+    if (s <= 15) return { text: 'Highly Overvalued', color: '#ef4444', bg: 'bg-red-500/10', tc: 'text-red-500', bc: 'border-red-500/30' };
+    if (s <= 35) return { text: 'Overvalued', color: '#f87171', bg: 'bg-red-400/10', tc: 'text-red-400', bc: 'border-red-400/30' };
     return { text: 'Neutral', color: '#94a3b8', bg: 'bg-slate-400/10', tc: 'text-slate-400', bc: 'border-slate-400/30' };
   };
   const label = getLabel(finalScore);
@@ -234,7 +234,7 @@ export default function CustomViewTab({
               <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Signal Score</h3>
             </div>
             <p className="text-xs text-slate-500 font-medium mb-3">
-              사용자가 직접 구성한 지표 조합을 바탕으로 계산된 <span className="text-violet-600 font-bold">커스텀 매수/매도 시그널</span>입니다.
+              사용자가 직접 구성한 지표 조합을 바탕으로 계산된 <span className="text-violet-600 font-bold">커스텀 저평가/고평가 시그널</span>입니다.
             </p>
             
             <div className="flex flex-col gap-3 w-full">

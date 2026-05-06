@@ -230,11 +230,11 @@ export default function StockEditorTab({ stockData }) {
     if (errorType === 'syntax') return { text: '수식 오류', color: 'text-slate-400', bg: 'bg-slate-100', icon: '❓' };
     if (errorType === 'invalid') return { text: 'NaN/Inf', color: 'text-amber-500', bg: 'bg-amber-50', icon: '⚠️' };
     if (score === null) return { text: '수식 오류', color: 'text-slate-400', bg: 'bg-slate-100', icon: '❓' };
-    if (score >= thres.strongBuy) return { text: '강력 매수', color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: '🟢' };
-    if (score >= thres.buy) return { text: '매수', color: 'text-emerald-400', bg: 'bg-emerald-400/10', icon: '🟢' };
+    if (score >= thres.strongBuy) return { text: '극단적 저평가', color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: '🟢' };
+    if (score >= thres.buy) return { text: '저평가', color: 'text-emerald-400', bg: 'bg-emerald-400/10', icon: '🟢' };
     if (score >= thres.neutral) return { text: '중립', color: 'text-slate-400', bg: 'bg-slate-400/10', icon: '⚪' };
-    if (score >= thres.sell) return { text: '매도', color: 'text-red-400', bg: 'bg-red-400/10', icon: '🔴' };
-    return { text: '강력 매도', color: 'text-red-500', bg: 'bg-red-500/10', icon: '🔴' };
+    if (score >= thres.sell) return { text: '고평가', color: 'text-red-400', bg: 'bg-red-400/10', icon: '🔴' };
+    return { text: '극단적 고평가', color: 'text-red-500', bg: 'bg-red-500/10', icon: '🔴' };
   };
 
   const currentSignal = getSignal(currentResult.value, thresholds, currentResult.error);
@@ -276,9 +276,9 @@ export default function StockEditorTab({ stockData }) {
       if (!data || data.total === 0) return '–';
       const win = (data.wins / data.total * 100).toFixed(1);
       const big = (data.bigWins / data.total * 100).toFixed(1);
-      return `${win}%(대승 ${big}%)`;
+      return `${win}%(강한 적중 ${big}%)`;
     };
-    return `매수 승 ${fmt(bt.buy)} · 매도 승 ${fmt(bt.sell)}`;
+    return `저평가 적중 ${fmt(bt.buy)} · 고평가 적중 ${fmt(bt.sell)}`;
   };
 
   const formatBacktestStrongRates = (bt) => {
@@ -287,9 +287,9 @@ export default function StockEditorTab({ stockData }) {
       if (!data || data.total === 0) return '–';
       const win = (data.wins / data.total * 100).toFixed(1);
       const big = (data.bigWins / data.total * 100).toFixed(1);
-      return `${win}%(대승 ${big}%)`;
+      return `${win}%(강한 적중 ${big}%)`;
     };
-    return `강력 매수 ${fmt(bt.strongBuy)} · 강력 매도 ${fmt(bt.strongSell)}`;
+    return `극단적 저평가 ${fmt(bt.strongBuy)} · 극단적 고평가 ${fmt(bt.strongSell)}`;
   };
 
   const handleSaveIndicator = () => {
@@ -567,12 +567,12 @@ export default function StockEditorTab({ stockData }) {
           <div className="space-y-3 pt-4">
             <div className="ml-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Signal Conditions</label>
-              <p className="text-[10px] font-bold text-slate-500 mt-1">※ 점수 결과값의 범위에 맞춰 아래 경계값을 자유롭게 설정하세요. 왼쪽=매도, 오른쪽=매수.</p>
+              <p className="text-[10px] font-bold text-slate-500 mt-1">※ 점수 결과값의 범위에 맞춰 아래 경계값을 자유롭게 설정하세요. 왼쪽=고평가, 오른쪽=저평가.</p>
             </div>
 
             <div className="flex items-stretch gap-1 md:gap-1.5">
               <div className="flex-1 min-w-0 bg-red-500/10 border border-red-500/30 rounded-l-xl py-3 px-1 md:px-2 flex items-center justify-center text-center">
-                <p className="text-[9px] md:text-[10px] font-black text-red-500 leading-tight">🔴<span className="hidden sm:inline"> 강력 매도</span></p>
+                <p className="text-[9px] md:text-[10px] font-black text-red-500 leading-tight">🔴<span className="hidden sm:inline"> 극단적 고평가</span></p>
               </div>
 
               <input
@@ -583,7 +583,7 @@ export default function StockEditorTab({ stockData }) {
               />
 
               <div className="flex-1 min-w-0 bg-red-400/10 border border-red-400/30 py-3 px-1 md:px-2 flex items-center justify-center text-center">
-                <p className="text-[9px] md:text-[10px] font-black text-red-400 leading-tight">🔴<span className="hidden sm:inline"> 매도</span></p>
+                <p className="text-[9px] md:text-[10px] font-black text-red-400 leading-tight">🔴<span className="hidden sm:inline"> 고평가</span></p>
               </div>
 
               <input
@@ -605,7 +605,7 @@ export default function StockEditorTab({ stockData }) {
               />
 
               <div className="flex-1 min-w-0 bg-emerald-400/10 border border-emerald-400/30 py-3 px-1 md:px-2 flex items-center justify-center text-center">
-                <p className="text-[9px] md:text-[10px] font-black text-emerald-400 leading-tight">🟢<span className="hidden sm:inline"> 매수</span></p>
+                <p className="text-[9px] md:text-[10px] font-black text-emerald-400 leading-tight">🟢<span className="hidden sm:inline"> 저평가</span></p>
               </div>
 
               <input
@@ -616,7 +616,7 @@ export default function StockEditorTab({ stockData }) {
               />
 
               <div className="flex-1 min-w-0 bg-emerald-500/10 border border-emerald-500/30 rounded-r-xl py-3 px-1 md:px-2 flex items-center justify-center text-center">
-                <p className="text-[9px] md:text-[10px] font-black text-emerald-500 leading-tight">🟢<span className="hidden sm:inline"> 강력 매수</span></p>
+                <p className="text-[9px] md:text-[10px] font-black text-emerald-500 leading-tight">🟢<span className="hidden sm:inline"> 극단적 저평가</span></p>
               </div>
             </div>
           </div>
@@ -675,7 +675,7 @@ export default function StockEditorTab({ stockData }) {
             <span className="text-[10px] font-bold text-slate-400 ml-1">일봉 · 최근 60거래일 (≈3개월) · {stockName}</span>
           </h3>
           <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full">
-            승: ±2% / 대승: ±5% (3거래일 내)
+            적중: ±2% / 강한 적중: ±5% (3거래일 내)
           </span>
         </div>
 
@@ -686,7 +686,7 @@ export default function StockEditorTab({ stockData }) {
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1">
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">승패 판정 기준 (일봉)</p>
           <p className="text-[11px] text-slate-600 leading-relaxed">
-            과거 일봉을 순회하며 점수가 임계값을 만족할 때마다 신호로 카운트합니다. <strong className="text-emerald-600 font-bold">매수 신호</strong>(score ≥ Buy)는 이후 3거래일 이내 봉의 <strong>고가</strong>가 신호가 대비 <strong className="text-emerald-600 font-bold">+2% 이상</strong>이면 <strong>승</strong>, <strong className="text-emerald-600 font-bold">+5% 이상</strong>이면 <strong>대승</strong>. <strong className="text-red-500 font-bold">매도 신호</strong>(score ≤ Sell)는 이후 3거래일의 <strong>저가</strong>가 -2%/-5% 도달 여부를 같은 룰로 측정합니다. 대승은 승에 포함됩니다.
+            과거 일봉을 순회하며 점수가 임계값을 만족할 때마다 신호로 카운트합니다. <strong className="text-emerald-600 font-bold">저평가 신호</strong>(score ≥ 저평가 임계값)는 이후 3거래일 이내 봉의 <strong>고가</strong>가 신호가 대비 <strong className="text-emerald-600 font-bold">+2% 이상</strong>이면 <strong>적중</strong>, <strong className="text-emerald-600 font-bold">+5% 이상</strong>이면 <strong>강한 적중</strong>. <strong className="text-red-500 font-bold">고평가 신호</strong>(score ≤ 고평가 임계값)는 이후 3거래일의 <strong>저가</strong>가 -2%/-5% 도달 여부를 같은 룰로 측정합니다. 강한 적중은 적중에 포함됩니다.
           </p>
         </div>
 
@@ -717,10 +717,10 @@ export default function StockEditorTab({ stockData }) {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
-                { label: '🟢 매수 (전체)', data: backtestResult.buy, cardCls: 'bg-emerald-50/60 border-emerald-200', titleCls: 'text-emerald-600', emphCls: 'text-emerald-700' },
-                { label: '🔴 매도 (전체)', data: backtestResult.sell, cardCls: 'bg-red-50/60 border-red-200', titleCls: 'text-red-600', emphCls: 'text-red-700' },
-                { label: '🟢 강력 매수만', data: backtestResult.strongBuy, cardCls: 'bg-emerald-100/70 border-emerald-300', titleCls: 'text-emerald-700', emphCls: 'text-emerald-800' },
-                { label: '🔴 강력 매도만', data: backtestResult.strongSell, cardCls: 'bg-red-100/70 border-red-300', titleCls: 'text-red-700', emphCls: 'text-red-800' },
+                { label: '🟢 저평가 (전체)', data: backtestResult.buy, cardCls: 'bg-emerald-50/60 border-emerald-200', titleCls: 'text-emerald-600', emphCls: 'text-emerald-700' },
+                { label: '🔴 고평가 (전체)', data: backtestResult.sell, cardCls: 'bg-red-50/60 border-red-200', titleCls: 'text-red-600', emphCls: 'text-red-700' },
+                { label: '🟢 극단적 저평가', data: backtestResult.strongBuy, cardCls: 'bg-emerald-100/70 border-emerald-300', titleCls: 'text-emerald-700', emphCls: 'text-emerald-800' },
+                { label: '🔴 극단적 고평가', data: backtestResult.strongSell, cardCls: 'bg-red-100/70 border-red-300', titleCls: 'text-red-700', emphCls: 'text-red-800' },
               ].filter(({ data }) => data).map(({ label, data, cardCls, titleCls, emphCls }) => {
                 const winRate = data.total > 0 ? (data.wins / data.total) * 100 : 0;
                 const bigWinRate = data.total > 0 ? (data.bigWins / data.total) * 100 : 0;
@@ -732,9 +732,9 @@ export default function StockEditorTab({ stockData }) {
                     ) : (
                       <>
                         <p className="text-3xl font-black tabular-nums text-slate-800">{winRate.toFixed(1)}%</p>
-                        <p className="text-[10px] font-bold text-slate-500 tabular-nums">승률 ({data.wins} / {data.total})</p>
+                        <p className="text-[10px] font-bold text-slate-500 tabular-nums">적중률 ({data.wins} / {data.total})</p>
                         <p className={`text-xs font-black tabular-nums mt-1 ${emphCls}`}>
-                          대승률 {bigWinRate.toFixed(1)}% ({data.bigWins})
+                          강한 적중률 {bigWinRate.toFixed(1)}% ({data.bigWins})
                         </p>
                       </>
                     )}

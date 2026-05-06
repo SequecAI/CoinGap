@@ -262,10 +262,10 @@ export default function StockCustomViewTab({
 
   const finalScore = calcScore();
   const getLabel = (s) => {
-    if (s >= 85) return { text: 'Strong Buy', bg: 'bg-emerald-500/10', tc: 'text-emerald-500', bc: 'border-emerald-500/30' };
-    if (s >= 65) return { text: 'Buy', bg: 'bg-emerald-400/10', tc: 'text-emerald-400', bc: 'border-emerald-400/30' };
-    if (s <= 15) return { text: 'Strong Sell', bg: 'bg-red-500/10', tc: 'text-red-500', bc: 'border-red-500/30' };
-    if (s <= 35) return { text: 'Sell', bg: 'bg-red-400/10', tc: 'text-red-400', bc: 'border-red-400/30' };
+    if (s >= 85) return { text: 'Highly Undervalued', bg: 'bg-emerald-500/10', tc: 'text-emerald-500', bc: 'border-emerald-500/30' };
+    if (s >= 65) return { text: 'Undervalued', bg: 'bg-emerald-400/10', tc: 'text-emerald-400', bc: 'border-emerald-400/30' };
+    if (s <= 15) return { text: 'Highly Overvalued', bg: 'bg-red-500/10', tc: 'text-red-500', bc: 'border-red-500/30' };
+    if (s <= 35) return { text: 'Overvalued', bg: 'bg-red-400/10', tc: 'text-red-400', bc: 'border-red-400/30' };
     return { text: 'Neutral', bg: 'bg-slate-400/10', tc: 'text-slate-400', bc: 'border-slate-400/30' };
   };
   const label = getLabel(finalScore);

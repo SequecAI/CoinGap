@@ -373,7 +373,7 @@ export default function StockAnalysisTab({
               <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Signal Score</h3>
             </div>
             <p className="text-xs text-slate-500 font-medium mb-3">
-              RSI, 볼린저, 5분 모멘텀 기반 <span className="text-violet-600 font-bold">매수/매도 신호</span>
+              RSI, 볼린저, 5분 모멘텀 기반 <span className="text-violet-600 font-bold">저평가/고평가 신호</span>
             </p>
             <SignalScorePanel score={signal.score} />
           </div>

@@ -62,8 +62,11 @@ def handle_upsert_user(body):
     
     action = body.get("action", "login")
     
+    # 어드민은 항상 '관리자' 고정
+    if body.get("email") == "adminsequenceai@gmail.com":
+        nickname = "관리자"
     # 로그인 액션이면서 이미 등록된 닉네임이 있다면 유지, 아니라면(닉네임 변경 등) body에서 받은 닉네임 사용
-    if action == "login" and existing and existing.get("nickname"):
+    elif action == "login" and existing and existing.get("nickname"):
         nickname = existing.get("nickname")
     else:
         nickname = body.get("nickname", "")

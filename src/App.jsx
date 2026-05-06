@@ -321,7 +321,7 @@ export default function App() {
             )}
 
             {/* 하단 로그인 & 토글 */}
-            <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+            <div className="flex flex-col sm:flex-row items-end sm:items-end justify-end sm:justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0">
               {/* 로그인 버튼 */}
               <div className="flex items-center gap-2 shrink-0">
                 {isLoggedIn ? (

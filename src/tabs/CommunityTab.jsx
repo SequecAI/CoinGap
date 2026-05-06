@@ -323,7 +323,7 @@ function BacktestBadge({ backtest }) {
   if (avg === null) return <span className="text-[10px] font-bold text-slate-400">신호 없음</span>;
   const color = avg >= 60 ? 'text-emerald-600 bg-emerald-50' : avg >= 40 ? 'text-amber-600 bg-amber-50' : 'text-red-600 bg-red-50';
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       <span className={`text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 ${color}`}>
         <BarChart3 size={10} />평균 {avg.toFixed(1)}%
       </span>
@@ -394,14 +394,13 @@ function IndicatorRankCard({ post, rank, isLoggedIn }) {
   return (
     <article onClick={() => setExpanded(false)}
       className="cursor-pointer p-5 border-2 border-amber-400 bg-amber-50/30 rounded-2xl shadow-md transition-all">
-      <div className="flex items-center justify-between mb-3 gap-3">
-        <div className="flex items-center gap-2.5 min-w-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-3">
+        <div className="flex items-center gap-2.5 min-w-0 w-full sm:w-auto">
           <div className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${medalBg}`}>{rank}</div>
-
           <div className="text-xs font-black text-slate-600 truncate">{renderNickname(post.nickname)}</div>
-          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">{modeLabel}</span>
+          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0 ml-auto sm:ml-0">{modeLabel}</span>
         </div>
-        <div className="flex flex-col items-end gap-1.5 shrink-0">
+        <div className="flex flex-col sm:items-end gap-1.5 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
           {post.backtest && (
             <span className="text-[9px] font-bold text-slate-400 leading-none">
               {formatCompactPeriod(post.backtest, post.indicatorMode)}
@@ -432,7 +431,7 @@ function IndicatorRankCard({ post, rank, isLoggedIn }) {
         </div>
       )}
       {post.backtest && (
-        <div className="grid grid-cols-2 gap-2 mb-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
           {[
             { label: '🟢 저평가', data: post.backtest.buy, cls: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
             { label: '🔴 고평가', data: post.backtest.sell, cls: 'bg-red-50 border-red-200 text-red-700' },

@@ -1,25 +1,24 @@
 import React, { useState } from 'react';
 import { BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
-import { cryptoMarketPosts, stockMarketPosts } from '../data/marketPosts';
+import { stockMarketPosts } from '../data/marketPosts';
 
-export default function BoardTab({ appMode }) {
+// 주식 모드 전용 시황 게시판.
+// stockMarketPosts에 일일 글이 누적되어 카드 리스트로 표시.
+// 향후 서버 DB로 이전 시 동일 스키마 fetch 결과로 교체.
+export default function StockBoardTab() {
   const [expandedId, setExpandedId] = useState(null);
 
-  const posts = appMode === 'stock' ? stockMarketPosts : cryptoMarketPosts;
-  const sectionLabel = appMode === 'stock' ? '국내 주식 시황' : '디지털 자산 시황';
-
-  // 최신순 정렬 (date 내림차순). 원 배열은 mutate하지 않음.
-  const sorted = [...posts].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const sorted = [...stockMarketPosts].sort((a, b) => (a.date < b.date ? 1 : -1));
 
   return (
     <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">
-          <BookOpen size={18} className={appMode === 'stock' ? 'text-emerald-600' : 'text-blue-600'} />
+          <BookOpen size={18} className="text-emerald-600" />
           시황 분석 게시판
         </h3>
         <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full">
-          {sectionLabel}
+          국내 주식 시황
         </span>
       </div>
 
@@ -36,25 +35,17 @@ export default function BoardTab({ appMode }) {
         <div className="space-y-3">
           {sorted.map((post) => {
             const isExpanded = expandedId === post.id;
-            const accentBorder = appMode === 'stock' ? 'border-emerald-400' : 'border-blue-400';
-            const accentBg = appMode === 'stock' ? 'bg-emerald-50/40' : 'bg-blue-50/40';
-            const hoverBorder = appMode === 'stock' ? 'hover:border-emerald-300' : 'hover:border-blue-300';
-            const dateBadge = appMode === 'stock'
-              ? 'text-emerald-600 bg-emerald-50'
-              : 'text-blue-600 bg-blue-50';
-            const moreHint = appMode === 'stock' ? 'text-emerald-500' : 'text-blue-500';
-
             return (
               <article
                 key={post.id}
                 onClick={() => setExpandedId(isExpanded ? null : post.id)}
                 className={`cursor-pointer p-4 md:p-5 border-2 rounded-2xl transition-all
                   ${isExpanded
-                    ? `${accentBorder} ${accentBg} shadow-md`
-                    : `border-slate-100 bg-white ${hoverBorder}`}`}
+                    ? 'border-emerald-400 bg-emerald-50/40 shadow-md'
+                    : 'border-slate-100 bg-white hover:border-emerald-300'}`}
               >
                 <div className="flex items-center justify-between mb-2 gap-3">
-                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-full tabular-nums shrink-0 ${dateBadge}`}>
+                  <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full tabular-nums shrink-0">
                     {post.date}
                   </span>
                   {isExpanded
@@ -74,7 +65,7 @@ export default function BoardTab({ appMode }) {
                 </p>
 
                 {!isExpanded && (
-                  <p className={`text-[10px] font-bold mt-2 ${moreHint}`}>전체 보기 →</p>
+                  <p className="text-[10px] font-bold text-emerald-500 mt-2">전체 보기 →</p>
                 )}
               </article>
             );

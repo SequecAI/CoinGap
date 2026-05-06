@@ -20,7 +20,8 @@ import StockAnalysisTab from './tabs/StockAnalysisTab';
 import StockCustomViewTab from './tabs/StockCustomViewTab';
 import IndicatorStudioTab from './tabs/IndicatorStudioTab';
 import StockEditorTab from './tabs/StockEditorTab';
-import BoardTab from './tabs/BoardTab';
+import StockBoardTab from './tabs/StockBoardTab';
+import MarketBrief from './components/MarketBrief';
 
 export default function App() {
   const {
@@ -80,10 +81,13 @@ export default function App() {
     localStorage.setItem('coinGap_appMode', appMode);
   }, [appMode]);
 
-  // 모드 전환 시 탭 호환성 유지 (dashboard는 코인 전용)
+  // 모드 전환 시 탭 호환성 유지 (dashboard는 코인 전용, board는 주식 전용)
   const handleModeSwitch = (mode) => {
     setAppMode(mode);
     if (mode === 'stock' && activeTab === 'dashboard') {
+      setActiveTab('analysis');
+    }
+    if (mode === 'crypto' && activeTab === 'board') {
       setActiveTab('analysis');
     }
   };
@@ -156,7 +160,7 @@ export default function App() {
           <div className="flex flex-col sm:flex-row gap-4 font-sans text-left items-end">
             {appMode === 'crypto' ? (
               <>
-                {activeTab !== 'studio' && activeTab !== 'board' && (
+                {activeTab !== 'studio' && (
                   <>
                     <div className="flex flex-col gap-1 text-left">
                       <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">DROP ALERT</label>
@@ -260,6 +264,9 @@ export default function App() {
           </div>
         </div>
 
+        {/* 시황 브리프 (collapsible, 헤더 직후 고정 위치) */}
+        <MarketBrief appMode={appMode} />
+
         {/* 탭 내비게이션 */}
         <div className="flex gap-2 bg-slate-200/50 p-1.5 rounded-2xl">
           {appMode === 'crypto' && (
@@ -280,12 +287,12 @@ export default function App() {
             className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'studio' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
             Editor
           </button>
-          <button onClick={() => setActiveTab('board')}
-            className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${activeTab === 'board' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
-            <BookOpen size={14} />
-            <span className="hidden sm:inline">Market Brief</span>
-            <span className="sm:hidden">Brief</span>
-          </button>
+          {appMode === 'stock' && (
+            <button onClick={() => setActiveTab('board')}
+              className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'board' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
+              Board
+            </button>
+          )}
         </div>
 
         {/* 탭 내용 */}
@@ -383,7 +390,8 @@ export default function App() {
           <StockEditorTab stockData={stockData} />
         )}
 
-        {activeTab === 'board' && <BoardTab appMode={appMode} />}
+        {activeTab === 'board' && appMode === 'stock' && <StockBoardTab />}
+
 
         {activeTab === 'custom' && appMode === 'stock' && (
           <StockCustomViewTab

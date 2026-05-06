@@ -108,6 +108,8 @@ export default function App() {
 
   const stockData = useStockData();
   const { isLoggedIn, userInfo, handleLoginSuccess, logout, updateNickname } = useAuth();
+  
+  const isInAppBrowser = /kakaotalk|instagram|fban|fbav|line|naver|daum/i.test(navigator.userAgent);
 
   const [dropThreshold, setDropThreshold] = useState(2.0);
   const [zScoreThreshold, setZScoreThreshold] = useState(3.0);
@@ -334,6 +336,18 @@ export default function App() {
                     <NicknameEditor userInfo={userInfo} onSave={updateNickname} />
                     <button onClick={logout} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-all" title="로그아웃">
                       <LogOut size={16} />
+                    </button>
+                  </div>
+                ) : isInAppBrowser ? (
+                  <div className="w-full flex justify-center sm:justify-end">
+                    <button onClick={() => {
+                        alert('카카오톡/SNS 내장 브라우저에서는 구글 보안 정책상 로그인이 차단됩니다.\n\n우측 하단 메뉴(⋮)에서 [다른 브라우저로 열기]를 선택하여 사파리나 크롬으로 접속해주세요!');
+                        if (/android/i.test(navigator.userAgent)) {
+                          window.location.href = `intent://${window.location.host}${window.location.pathname}#Intent;scheme=https;package=com.android.chrome;end;`;
+                        }
+                      }} 
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-black border border-slate-200 transition-colors flex items-center gap-1.5">
+                      <span className="text-[14px]">⚠️</span> 인앱 브라우저 제한 (클릭)
                     </button>
                   </div>
                 ) : (

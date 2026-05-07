@@ -614,7 +614,7 @@ function FreeWriteForm({ userInfo, onSubmit }) {
     if (!title.trim()) return;
     setIsSubmitting(true);
     try {
-      await onSubmit({ type: 'free', userId: userInfo.userId, nickname: userInfo.nickname, profileImage: userInfo.profileImage, title: title.trim(), content: content.trim() });
+      await onSubmit({ type: 'board', userId: userInfo.userId, nickname: userInfo.nickname, profileImage: userInfo.profileImage, title: title.trim(), content: content.trim() });
       setTitle(''); setContent(''); setShowForm(false);
     } catch (err) { alert('작성 실패: ' + err.message); }
     finally { setIsSubmitting(false); }
@@ -659,8 +659,7 @@ function FreeWriteForm({ userInfo, onSubmit }) {
 // ══════════════════════════════════════════════
 // ── 메인 CommunityTab ──
 // ══════════════════════════════════════════════
-export default function CommunityTab({ isLoggedIn, userInfo }) {
-  const [subTab, setSubTab] = useState('indicator');
+export default function CommunityTab({ isLoggedIn, userInfo, subTab, onSubTabChange }) {
   const { 
     posts, isLoading, error, 
     fetchPosts, createPost, updatePost, deletePost, incrementViews,
@@ -701,7 +700,7 @@ export default function CommunityTab({ isLoggedIn, userInfo }) {
   const POSTS_PER_PAGE = 5;
 
   const filteredPosts = useMemo(() => {
-    if (subTab !== 'free') return [];
+    if (subTab !== 'board') return [];
     if (!searchQuery.trim()) return posts;
     const q = searchQuery.toLowerCase();
     return posts.filter(p => p.title.toLowerCase().includes(q));
@@ -722,18 +721,18 @@ export default function CommunityTab({ isLoggedIn, userInfo }) {
     <div className="space-y-5">
       {/* 서브 탭 */}
       <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl">
-        <button onClick={() => setSubTab('indicator')}
+        <button onClick={() => onSubTabChange('indicator')}
           className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${subTab === 'indicator' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
           <Trophy size={16} />지표 랭킹
         </button>
-        <button onClick={() => setSubTab('free')}
-          className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${subTab === 'free' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
+        <button onClick={() => onSubTabChange('board')}
+          className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${subTab === 'board' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
           <MessageSquare size={16} />자유게시판
         </button>
       </div>
 
       {/* 헤더 및 TOP 5 랭킹 패널 */}
-      {subTab === 'free' ? (
+      {subTab === 'board' ? (
         <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
           <div className="flex items-center gap-3 mb-2">
             <MessageSquare size={20} className="text-indigo-500" />
@@ -767,18 +766,18 @@ export default function CommunityTab({ isLoggedIn, userInfo }) {
       )}
 
       {/* 작성 영역 (자유게시판) */}
-      {subTab === 'free' && (
+      {subTab === 'board' && (
         isLoggedIn ? <FreeWriteForm userInfo={userInfo} onSubmit={handleCreatePost} /> : <LoginPrompt />
       )}
 
       {/* 글 목록 (자유게시판) */}
-      {subTab === 'free' && (
+      {subTab === 'board' && (
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
               Latest Posts
             </span>
-            <button onClick={() => { fetchPosts('free'); setSearchQuery(''); setCurrentPage(1); }}
+            <button onClick={() => { fetchPosts('board'); setSearchQuery(''); setCurrentPage(1); }}
               className="text-[10px] font-bold text-indigo-500 hover:text-indigo-700 transition-colors flex items-center gap-1">
               <RefreshCcw size={10} />새로고침
             </button>

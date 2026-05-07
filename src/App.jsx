@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation, useNavigate, Routes, Route, Navigate } from 'react-router-dom';
 import {
   Activity,
   Bell,
@@ -26,7 +27,6 @@ import StockAnalysisTab from './tabs/StockAnalysisTab';
 import StockCustomViewTab from './tabs/StockCustomViewTab';
 import IndicatorStudioTab from './tabs/IndicatorStudioTab';
 import StockEditorTab from './tabs/StockEditorTab';
-import StockBoardTab from './tabs/StockBoardTab';
 import CommunityTab from './tabs/CommunityTab';
 import MarketBrief from './components/MarketBrief';
 
@@ -114,8 +114,21 @@ export default function App() {
   const [dropThreshold, setDropThreshold] = useState(2.0);
   const [zScoreThreshold, setZScoreThreshold] = useState(3.0);
   const [showInfo, setShowInfo] = useState(true);
-  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('coinGap_activeTab') || 'dashboard');
-  const [appMode, setAppMode] = useState(() => localStorage.getItem('coinGap_appMode') || 'crypto');
+  // Router hooks
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // URL Path에 따른 appMode 및 activeTab 결정
+  const pathParts = location.pathname.split('/').filter(Boolean);
+  const appMode = pathParts[0] === 'stock' ? 'stock' : 
+                  pathParts[0] === 'community' ? 'community' : 'crypto';
+  
+  // URL에 탭이 명시되어 있으면 그것을 쓰고, 없으면 로컬스토리지나 기본값 사용
+  const storedTab = localStorage.getItem('coinGap_activeTab');
+  const fallbackTab = appMode === 'community' ? 'indicator' :
+                      (appMode === 'stock' && storedTab === 'dashboard') ? 'analysis' : 
+                      (storedTab || 'dashboard');
+  const activeTab = pathParts[1] || fallbackTab;
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [coinSearchQuery, setCoinSearchQuery] = useState('');
@@ -144,20 +157,31 @@ export default function App() {
     localStorage.setItem('coinGap_activeTab', activeTab);
   }, [activeTab]);
 
+  // 기본 경로 리다이렉트
   useEffect(() => {
-    localStorage.setItem('coinGap_appMode', appMode);
-  }, [appMode]);
+    if (location.pathname === '/' || location.pathname === `/${appMode}`) {
+      // 탭 이름이 없는 기본 루트나 기본 모드 접속 시 현재 탭을 포함한 주소로 변경
+      navigate(`/${appMode}/${activeTab}`, { replace: true });
+    } else if (location.pathname === '/community/free') {
+      // 구 주소 호환성 유지
+      navigate('/community/board', { replace: true });
+    }
+  }, [location.pathname, appMode, activeTab, navigate]);
 
-  // 모드 전환 시 탭 호환성 유지
+  // 모드 전환 시 URL 라우팅
   const handleModeSwitch = (mode) => {
-    setAppMode(mode);
-    if (mode === 'stock' && activeTab === 'dashboard') {
-      setActiveTab('analysis');
+    let nextTab = activeTab;
+    if (mode === 'stock' && nextTab === 'dashboard') {
+      nextTab = 'analysis';
     }
-    if (mode === 'crypto' && activeTab === 'board') {
-      setActiveTab('analysis');
+    if (nextTab === 'board') {
+      nextTab = 'analysis';
     }
-    // community 모드에서는 탭 내비게이션 불필요
+    navigate(`/${mode}${mode === 'community' ? '' : '/' + nextTab}`);
+  };
+
+  const handleTabSwitch = (tab) => {
+    navigate(`/${appMode}/${tab}`);
   };
 
   const isLoading = appMode === 'community' ? false : (appMode === 'crypto' ? loading : stockData.loading);
@@ -366,13 +390,13 @@ export default function App() {
 
               {/* 모드 토글 (우측 고정) */}
               <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
-                <button onClick={() => handleModeSwitch('crypto')}
-                  className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'crypto' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                  ₿ 코인
-                </button>
                 <button onClick={() => handleModeSwitch('stock')}
                   className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'stock' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                   🇰🇷 주식
+                </button>
+                <button onClick={() => handleModeSwitch('crypto')}
+                  className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'crypto' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                  ₿ 코인
                 </button>
                 <button onClick={() => handleModeSwitch('community')}
                   className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'community' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
@@ -390,29 +414,23 @@ export default function App() {
         {appMode !== 'community' && (
         <div className="flex gap-2 bg-slate-200/50 p-1.5 rounded-2xl">
           {appMode === 'crypto' && (
-            <button onClick={() => setActiveTab('dashboard')}
+            <button onClick={() => handleTabSwitch('dashboard')}
               className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'dashboard' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
               Divergence
             </button>
           )}
-          <button onClick={() => setActiveTab('analysis')}
+          <button onClick={() => handleTabSwitch('analysis')}
             className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'analysis' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
             Statistics
           </button>
-          <button onClick={() => setActiveTab('custom')}
+          <button onClick={() => handleTabSwitch('custom')}
             className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'custom' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
             Custom View
           </button>
-          <button onClick={() => setActiveTab('studio')}
+          <button onClick={() => handleTabSwitch('studio')}
             className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'studio' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
             Editor
           </button>
-          {appMode === 'stock' && (
-            <button onClick={() => setActiveTab('board')}
-              className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${activeTab === 'board' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
-              Board
-            </button>
-          )}
         </div>
         )}
 
@@ -511,11 +529,9 @@ export default function App() {
           <StockEditorTab stockData={stockData} />
         )}
 
-        {activeTab === 'board' && appMode === 'stock' && <StockBoardTab />}
-
         {/* 커뮤니티 모드 */}
         {appMode === 'community' && (
-          <CommunityTab isLoggedIn={isLoggedIn} userInfo={userInfo} />
+          <CommunityTab isLoggedIn={isLoggedIn} userInfo={userInfo} subTab={activeTab} onSubTabChange={handleTabSwitch} />
         )}
 
 

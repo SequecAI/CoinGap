@@ -9,6 +9,10 @@ export default function MarketBrief({ appMode, userInfo }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // 페이지네이션 상태 (이전 시황 목록용)
+  const [currentPage, setCurrentPage] = useState(1);
+  const postsPerPage = 5;
+
   // 작성/수정 공용 상태
   const [formMode, setFormMode] = useState(null); // null | 'create' | 'edit'
   const [editTarget, setEditTarget] = useState(null); // 수정 대상 post
@@ -186,7 +190,7 @@ export default function MarketBrief({ appMode, userInfo }) {
                 이전 시황 보기 ({posts.length - 1}건)
               </summary>
               <div className="mt-3 space-y-3">
-                {posts.slice(1).map(p => (
+                {posts.slice(1 + (currentPage - 1) * postsPerPage, 1 + currentPage * postsPerPage).map(p => (
                   <div key={p.postId} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
                     <div className="flex items-center justify-between mb-1">
                       <h5 className="text-xs font-black text-slate-700 truncate">{p.title}</h5>
@@ -203,6 +207,29 @@ export default function MarketBrief({ appMode, userInfo }) {
                     <p className="text-xs text-slate-500 font-medium leading-relaxed whitespace-pre-line line-clamp-3">{p.content}</p>
                   </div>
                 ))}
+                
+                {/* 페이지네이션 */}
+                {posts.length - 1 > postsPerPage && (
+                  <div className="flex justify-center items-center gap-4 mt-4 pt-2">
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="text-xs font-bold text-slate-500 disabled:opacity-30 hover:text-slate-700"
+                    >
+                      ← 이전
+                    </button>
+                    <span className="text-xs font-bold text-slate-400">
+                      {currentPage} / {Math.ceil((posts.length - 1) / postsPerPage)}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(Math.ceil((posts.length - 1) / postsPerPage), p + 1))}
+                      disabled={currentPage === Math.ceil((posts.length - 1) / postsPerPage)}
+                      className="text-xs font-bold text-slate-500 disabled:opacity-30 hover:text-slate-700"
+                    >
+                      다음 →
+                    </button>
+                  </div>
+                )}
               </div>
             </details>
           )}

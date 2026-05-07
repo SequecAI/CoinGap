@@ -155,11 +155,11 @@ def handle_post_actions(body):
             return _response(500, {"error": str(e)})
 
     # action == "create"
-    post_type = body.get("type")  # "free" | "indicator" | "market_crypto" | "market_stock"
+    post_type = body.get("type")  # "board" | "indicator" | "market_crypto" | "market_stock"
     user_id = body.get("userId")
     title = body.get("title", "").strip()
 
-    VALID_TYPES = ("free", "indicator", "market_crypto", "market_stock")
+    VALID_TYPES = ("board", "indicator", "market_crypto", "market_stock")
     if post_type not in VALID_TYPES:
         return _response(400, {"error": f"type must be one of {VALID_TYPES}"})
     if not user_id:
@@ -205,11 +205,11 @@ def handle_post_actions(body):
 
     return _response(201, {"message": "Created", "postId": post_id})
 
-# ── GET /posts?type=free|indicator|market_crypto|market_stock ──
+# ── GET /posts?type=board|indicator|market_crypto|market_stock ──
 def handle_list_posts(params):
     """타입별 게시글 목록 조회 (최신순)."""
-    post_type = (params or {}).get("type", "free")
-    VALID_TYPES = ("free", "indicator", "market_crypto", "market_stock")
+    post_type = (params or {}).get("type", "board")
+    VALID_TYPES = ("board", "indicator", "market_crypto", "market_stock")
     if post_type not in VALID_TYPES:
         return _response(400, {"error": f"type must be one of {VALID_TYPES}"})
 

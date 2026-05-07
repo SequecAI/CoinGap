@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Newspaper, ChevronDown, ChevronUp, Plus, Send, X } from 'lucide-react';
+import { Newspaper, ChevronDown, ChevronUp, Plus, Send, X, Pencil } from 'lucide-react';
 
 const API_BASE = 'https://oo78pteio2.execute-api.ap-northeast-2.amazonaws.com';
 const ADMIN_EMAIL = 'adminsequenceai@gmail.com';
@@ -8,7 +8,10 @@ export default function MarketBrief({ appMode, userInfo }) {
   const [isOpen, setIsOpen] = useState(false);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showForm, setShowForm] = useState(false);
+
+  // 작성/수정 공용 상태
+  const [formMode, setFormMode] = useState(null); // null | 'create' | 'edit'
+  const [editTarget, setEditTarget] = useState(null); // 수정 대상 post
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,30 +38,67 @@ export default function MarketBrief({ appMode, userInfo }) {
     fetchMarketPosts();
   }, [fetchMarketPosts]);
 
+  const openCreateForm = () => {
+    setFormMode('create');
+    setEditTarget(null);
+    setTitle('');
+    setContent('');
+  };
+
+  const openEditForm = (post) => {
+    setFormMode('edit');
+    setEditTarget(post);
+    setTitle(post.title);
+    setContent(post.content);
+  };
+
+  const closeForm = () => {
+    setFormMode(null);
+    setEditTarget(null);
+    setTitle('');
+    setContent('');
+  };
+
   const handleSubmit = async () => {
     if (!title.trim() || !content.trim() || !userInfo) return;
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/posts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          action: 'create',
-          type: marketType,
-          userId: userInfo.userId,
-          nickname: userInfo.nickname,
-          email: userInfo.email,
-          title: title.trim(),
-          content: content.trim(),
-        }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setTitle('');
-      setContent('');
-      setShowForm(false);
+      if (formMode === 'edit' && editTarget) {
+        // 수정
+        const res = await fetch(`${API_BASE}/posts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            action: 'update',
+            PK: editTarget.PK,
+            SK: editTarget.SK,
+            userId: userInfo.userId,
+            title: title.trim(),
+            content: content.trim(),
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      } else {
+        // 새 작성
+        const res = await fetch(`${API_BASE}/posts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            action: 'create',
+            type: marketType,
+            userId: userInfo.userId,
+            nickname: userInfo.nickname,
+            email: userInfo.email,
+            title: title.trim(),
+            content: content.trim(),
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      }
+      closeForm();
       fetchMarketPosts();
     } catch (err) {
-      alert('시황 작성 실패: ' + err.message);
+      alert((formMode === 'edit' ? '수정' : '작성') + ' 실패: ' + err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -128,9 +168,10 @@ export default function MarketBrief({ appMode, userInfo }) {
                   ※ 작성 시점의 시장 데이터와 공개 정보를 바탕으로 한 참고용 분석 자료이며, 매매 권유나 투자 자문이 아닙니다.
                 </p>
                 {isAdmin && (
-                  <button onClick={() => handleDelete(latest)} className="text-[10px] font-bold text-red-400 hover:text-red-600 shrink-0 ml-3">
-                    삭제
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                    <button onClick={() => openEditForm(latest)} className="text-[10px] font-bold text-indigo-400 hover:text-indigo-600">수정</button>
+                    <button onClick={() => handleDelete(latest)} className="text-[10px] font-bold text-red-400 hover:text-red-600">삭제</button>
+                  </div>
                 )}
               </div>
             </div>
@@ -152,7 +193,10 @@ export default function MarketBrief({ appMode, userInfo }) {
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-[9px] font-bold text-slate-400 tabular-nums">{p.createdAt?.split('T')[0]}</span>
                         {isAdmin && (
-                          <button onClick={() => handleDelete(p)} className="text-[9px] font-bold text-red-400 hover:text-red-600">삭제</button>
+                          <>
+                            <button onClick={() => openEditForm(p)} className="text-[9px] font-bold text-indigo-400 hover:text-indigo-600">수정</button>
+                            <button onClick={() => handleDelete(p)} className="text-[9px] font-bold text-red-400 hover:text-red-600">삭제</button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -163,10 +207,10 @@ export default function MarketBrief({ appMode, userInfo }) {
             </details>
           )}
 
-          {/* 관리자 시황 작성 폼 */}
-          {isAdmin && !showForm && (
+          {/* 관리자: 작성/수정 폼 */}
+          {isAdmin && !formMode && (
             <button
-              onClick={() => setShowForm(true)}
+              onClick={openCreateForm}
               className={`w-full py-2.5 rounded-xl border-2 border-dashed text-xs font-black transition-colors flex items-center justify-center gap-1.5 ${
                 isStock 
                   ? 'border-emerald-200 text-emerald-500 hover:bg-emerald-50' 
@@ -177,11 +221,13 @@ export default function MarketBrief({ appMode, userInfo }) {
             </button>
           )}
 
-          {isAdmin && showForm && (
+          {isAdmin && formMode && (
             <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-500 uppercase">시황 작성</span>
-                <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600">
+                <span className="text-[10px] font-black text-slate-500 uppercase flex items-center gap-1.5">
+                  {formMode === 'edit' ? <><Pencil size={12} /> 시황 수정</> : '시황 작성'}
+                </span>
+                <button onClick={closeForm} className="text-slate-400 hover:text-slate-600">
                   <X size={14} />
                 </button>
               </div>
@@ -206,7 +252,7 @@ export default function MarketBrief({ appMode, userInfo }) {
                     isStock ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  <Send size={12} /> {isSubmitting ? '작성 중...' : '시황 게시'}
+                  <Send size={12} /> {isSubmitting ? '처리 중...' : formMode === 'edit' ? '수정 완료' : '시황 게시'}
                 </button>
               </div>
             </div>

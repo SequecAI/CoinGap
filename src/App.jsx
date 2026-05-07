@@ -120,8 +120,8 @@ export default function App() {
 
   // URL Path에 따른 appMode 및 activeTab 결정
   const pathParts = location.pathname.split('/').filter(Boolean);
-  const appMode = pathParts[0] === 'stock' ? 'stock' : 
-                  pathParts[0] === 'community' ? 'community' : 'crypto';
+  const appMode = pathParts[0] === 'crypto' ? 'crypto' : 
+                  pathParts[0] === 'community' ? 'community' : 'stock';
   
   // URL에 탭이 명시되어 있으면 그것을 쓰고, 없으면 로컬스토리지나 기본값 사용
   const storedTab = localStorage.getItem('coinGap_activeTab');
@@ -159,8 +159,10 @@ export default function App() {
 
   // 기본 경로 리다이렉트
   useEffect(() => {
-    if (location.pathname === '/' || location.pathname === `/${appMode}`) {
-      // 탭 이름이 없는 기본 루트나 기본 모드 접속 시 현재 탭을 포함한 주소로 변경
+    if (location.pathname === '/') {
+      navigate(`/stock/${activeTab}`, { replace: true });
+    } else if (location.pathname === `/${appMode}`) {
+      // 탭 이름이 없는 모드 접속 시 현재 탭을 포함한 주소로 변경
       navigate(`/${appMode}/${activeTab}`, { replace: true });
     } else if (location.pathname === '/community/free') {
       // 구 주소 호환성 유지
@@ -235,7 +237,7 @@ export default function App() {
             </div>
             <div className="text-left font-sans">
               <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none font-sans">
-                {appMode === 'community' ? '커뮤니티' : appMode === 'crypto' ? '코인 갭 모니터' : '국내주식 모니터'}
+                {appMode === 'community' ? '커뮤니티' : appMode === 'crypto' ? '코인 모니터' : '국내주식 모니터'}
               </h1>
               {appMode !== 'community' && (
               <div className="flex items-center gap-2 text-slate-400 mt-1">
@@ -260,11 +262,11 @@ export default function App() {
                   <>
                     <div className="flex flex-col gap-1 text-left">
                       <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">DROP ALERT</label>
-                      <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums text-left" value={dropThreshold} onChange={(e) => setDropThreshold(Number(e.target.value))} />
+                      <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-20 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums text-left" value={dropThreshold} onChange={(e) => setDropThreshold(Number(e.target.value))} />
                     </div>
                     <div className="flex flex-col gap-1 text-left">
                       <label className="text-[10px] font-black text-orange-400 px-1 uppercase tracking-tighter">Z-Score Alert</label>
-                      <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-24 font-bold outline-none focus:ring-2 focus:ring-orange-500 transition-all tabular-nums text-left" value={zScoreThreshold} onChange={(e) => setZScoreThreshold(Number(e.target.value))} />
+                      <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-20 font-bold outline-none focus:ring-2 focus:ring-orange-500 transition-all tabular-nums text-left" value={zScoreThreshold} onChange={(e) => setZScoreThreshold(Number(e.target.value))} />
                     </div>
                   </>
                 )}
@@ -273,7 +275,7 @@ export default function App() {
                     <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">Compare: {altName}</label>
                     <div className="relative">
                       <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input type="text" placeholder="코인명 또는 코드" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 pl-8 pr-8 w-full sm:w-52 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all text-left font-sans text-sm"
+                      <input type="text" placeholder="코인명 또는 코드" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 pl-8 pr-8 w-full sm:w-44 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all text-left font-sans text-sm"
                         value={coinSearchQuery}
                         onChange={(e) => { setCoinSearchQuery(e.target.value); searchCoin(e.target.value); setShowCoinSearch(true); }}
                         onFocus={() => setShowCoinSearch(true)} />
@@ -389,17 +391,17 @@ export default function App() {
               </div>
 
               {/* 모드 토글 (우측 고정) */}
-              <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+              <div className="flex bg-slate-100 p-1 rounded-xl gap-1 shrink-0">
                 <button onClick={() => handleModeSwitch('stock')}
-                  className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'stock' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                  className={`px-3 py-2 rounded-lg text-xs font-black transition-all whitespace-nowrap ${appMode === 'stock' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                   🇰🇷 주식
                 </button>
                 <button onClick={() => handleModeSwitch('crypto')}
-                  className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'crypto' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                  className={`px-3 py-2 rounded-lg text-xs font-black transition-all whitespace-nowrap ${appMode === 'crypto' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                   ₿ 코인
                 </button>
                 <button onClick={() => handleModeSwitch('community')}
-                  className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${appMode === 'community' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                  className={`px-3 py-2 rounded-lg text-xs font-black transition-all whitespace-nowrap ${appMode === 'community' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                   📋 커뮤니티
                 </button>
               </div>

@@ -155,12 +155,13 @@ def handle_post_actions(body):
             return _response(500, {"error": str(e)})
 
     # action == "create"
-    post_type = body.get("type")  # "free" | "indicator"
+    post_type = body.get("type")  # "free" | "indicator" | "market_crypto" | "market_stock"
     user_id = body.get("userId")
     title = body.get("title", "").strip()
 
-    if post_type not in ("free", "indicator"):
-        return _response(400, {"error": "type must be 'free' or 'indicator'"})
+    VALID_TYPES = ("free", "indicator", "market_crypto", "market_stock")
+    if post_type not in VALID_TYPES:
+        return _response(400, {"error": f"type must be one of {VALID_TYPES}"})
     if not user_id:
         return _response(400, {"error": "userId is required"})
     if not title:
@@ -204,12 +205,13 @@ def handle_post_actions(body):
 
     return _response(201, {"message": "Created", "postId": post_id})
 
-# ── GET /posts?type=free|indicator ──
+# ── GET /posts?type=free|indicator|market_crypto|market_stock ──
 def handle_list_posts(params):
     """타입별 게시글 목록 조회 (최신순)."""
     post_type = (params or {}).get("type", "free")
-    if post_type not in ("free", "indicator"):
-        return _response(400, {"error": "type must be 'free' or 'indicator'"})
+    VALID_TYPES = ("free", "indicator", "market_crypto", "market_stock")
+    if post_type not in VALID_TYPES:
+        return _response(400, {"error": f"type must be one of {VALID_TYPES}"})
 
     result = community_table.query(
         KeyConditionExpression=boto3.dynamodb.conditions.Key("PK").eq(f"POST#{post_type}"),

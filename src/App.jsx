@@ -384,7 +384,7 @@ export default function App() {
         </div>
 
         {/* 시황 브리프 (collapsible, 헤더 직후 고정 위치) — community 모드에서는 숨김 */}
-        {appMode !== 'community' && <MarketBrief appMode={appMode} />}
+        {appMode !== 'community' && <MarketBrief appMode={appMode} userInfo={userInfo} />}
 
         {/* 탭 내비게이션 — community 모드에서는 숨김 */}
         {appMode !== 'community' && (

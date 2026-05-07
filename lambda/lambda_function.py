@@ -146,7 +146,8 @@ def handle_post_actions(body):
         try:
             community_table.update_item(
                 Key={"PK": pk, "SK": sk},
-                UpdateExpression="SET views = if_not_exists(views, :zero) + :inc",
+                UpdateExpression="SET #v = if_not_exists(#v, :zero) + :inc",
+                ExpressionAttributeNames={"#v": "views"},
                 ExpressionAttributeValues={":inc": 1, ":zero": 0}
             )
             return _response(200, {"message": "Views incremented"})

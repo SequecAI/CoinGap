@@ -123,11 +123,8 @@ export default function App() {
   const appMode = pathParts[0] === 'crypto' ? 'crypto' : 
                   pathParts[0] === 'community' ? 'community' : 'stock';
   
-  // URL에 탭이 명시되어 있으면 그것을 쓰고, 없으면 로컬스토리지나 기본값 사용
-  const storedTab = localStorage.getItem('coinGap_activeTab');
-  const fallbackTab = appMode === 'community' ? 'indicator' :
-                      (appMode === 'stock' && storedTab === 'dashboard') ? 'analysis' : 
-                      (storedTab || 'dashboard');
+  // URL에 탭이 명시되어 있으면 그것을 쓰고, 없으면 기본값 사용
+  const fallbackTab = appMode === 'community' ? 'board' : 'analysis';
   const activeTab = pathParts[1] || fallbackTab;
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
@@ -152,23 +149,23 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // 로컬스토리지 저장
+  // 로컬스토리지 저장 (필요한 경우에만 사용, 현재는 비활성)
   useEffect(() => {
-    localStorage.setItem('coinGap_activeTab', activeTab);
+    // localStorage.setItem('coinGap_activeTab', activeTab);
   }, [activeTab]);
 
   // 기본 경로 리다이렉트
   useEffect(() => {
     if (location.pathname === '/') {
-      navigate(`/stock/${activeTab}`, { replace: true });
-    } else if (location.pathname === `/${appMode}`) {
-      // 탭 이름이 없는 모드 접속 시 현재 탭을 포함한 주소로 변경
-      navigate(`/${appMode}/${activeTab}`, { replace: true });
+      // 최상위 접속 시 무조건 주식/통계 페이지로 이동
+      navigate('/stock/analysis', { replace: true });
+    } else if (location.pathname === `/${appMode}` || location.pathname === `/${appMode}/`) {
+      // 모드만 입력된 경우 해당 모드의 기본 탭으로 이동
+      navigate(`/${appMode}/${fallbackTab}`, { replace: true });
     } else if (location.pathname === '/community/free') {
-      // 구 주소 호환성 유지
       navigate('/community/board', { replace: true });
     }
-  }, [location.pathname, appMode, activeTab, navigate]);
+  }, [location.pathname, appMode, fallbackTab, navigate]);
 
   // 모드 전환 시 URL 라우팅
   const handleModeSwitch = (mode) => {

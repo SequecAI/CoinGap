@@ -170,12 +170,21 @@ export default function App() {
   // 모드 전환 시 URL 라우팅
   const handleModeSwitch = (mode) => {
     let nextTab = activeTab;
-    if (mode === 'stock' && nextTab === 'dashboard') {
-      nextTab = 'analysis';
+    
+    if (mode === 'stock' || mode === 'crypto') {
+      // 커뮤니티 전용 탭에서 넘어올 경우 기본 통계 탭으로 리셋
+      if (nextTab === 'board' || nextTab === 'indicator') {
+        nextTab = 'analysis';
+      }
+      // 주식 모드는 대시보드(Divergence)가 없으므로 통계로 리셋
+      if (mode === 'stock' && nextTab === 'dashboard') {
+        nextTab = 'analysis';
+      }
+    } else if (mode === 'community') {
+      // 커뮤니티로 갈 때는 기본 게시판 탭으로
+      nextTab = 'board';
     }
-    if (nextTab === 'board') {
-      nextTab = 'analysis';
-    }
+
     navigate(`/${mode}${mode === 'community' ? '' : '/' + nextTab}`);
   };
 

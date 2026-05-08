@@ -443,6 +443,116 @@ export function BollingerBandPanel({ bb, altName }) {
   );
 }
 
+// ── 주가 차트 (일봉) ──
+export function CoinPriceChart({ dayCandles }) {
+  if (!dayCandles || dayCandles.length < 5) return <EmptyState text="데이터 로딩 중..." />;
+
+  const prices = dayCandles.map(c => c.trade_price);
+  const minP = Math.min(...prices);
+  const maxP = Math.max(...prices);
+  const range = maxP - minP || 1;
+
+  // 20일 이동평균선
+  const ma20 = [];
+  for (let i = 0; i < prices.length; i++) {
+    if (i < 19) { ma20.push(null); continue; }
+    const avg = prices.slice(i - 19, i + 1).reduce((a, b) => a + b, 0) / 20;
+    ma20.push(avg);
+  }
+
+  const padX = 5, padTop = 8, padBottom = 12;
+  const chartW = 110, chartH = 55;
+  const drawW = chartW - padX * 2;
+  const drawH = chartH - padTop - padBottom;
+
+  const toPoint = (val, idx) => ({
+    x: padX + (idx / (prices.length - 1)) * drawW,
+    y: padTop + (1 - (val - minP) / range) * drawH,
+  });
+
+  const pricePoints = prices.map((p, i) => toPoint(p, i));
+  const pricePath = pricePoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+  const areaPath = `${pricePath} L${pricePoints[pricePoints.length - 1].x},${chartH - padBottom} L${pricePoints[0].x},${chartH - padBottom} Z`;
+
+  const maPoints = ma20
+    .map((v, i) => v !== null ? toPoint(v, i) : null)
+    .filter(Boolean);
+  const maPath = maPoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+
+  const lastPrice = prices[prices.length - 1];
+  const firstPrice = prices[0];
+  const isUp = lastPrice >= firstPrice;
+
+  // 날짜 라벨
+  const dateLabels = [0, Math.floor(dayCandles.length / 2), dayCandles.length - 1];
+
+  return (
+    <div className="flex flex-col gap-1 w-full">
+      <svg viewBox={`0 0 ${chartW} ${chartH + 6}`} className="w-full" preserveAspectRatio="xMidYMid meet">
+        <path d={areaPath} fill={isUp ? 'rgba(239, 68, 68, 0.06)' : 'rgba(59, 130, 246, 0.06)'} />
+        <path d={pricePath} fill="none" stroke={isUp ? '#ef4444' : '#3b82f6'} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+        {maPoints.length > 1 && (
+          <path d={maPath} fill="none" stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="2,1" opacity="0.8" />
+        )}
+        <circle cx={pricePoints[pricePoints.length - 1].x} cy={pricePoints[pricePoints.length - 1].y}
+          r={2} fill={isUp ? '#ef4444' : '#3b82f6'} />
+        {dateLabels.map(idx => {
+          const c = dayCandles[idx];
+          if (!c) return null;
+          const dateStr = c.candle_date_time_kst?.split('T')[0]?.substring(5) || '';
+          const anchor = idx === 0 ? 'start' : idx === dayCandles.length - 1 ? 'end' : 'middle';
+          return (
+            <text key={idx} x={pricePoints[idx].x} y={chartH + 4} textAnchor={anchor}
+              fontSize="3" fill="#94a3b8" fontWeight="600">{dateStr}</text>
+          );
+        })}
+      </svg>
+      <div className="flex justify-between text-[10px] text-slate-400 font-bold tabular-nums">
+        <span>Low: {minP.toLocaleString()}</span>
+        <span className="text-amber-500">━ MA20</span>
+        <span>High: {maxP.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── 52주 고저 진행바 ──
+export function Week52Bar({ currentPrice, high52w, low52w }) {
+  const high = parseFloat(high52w) || 0;
+  const low = parseFloat(low52w) || 0;
+  const current = parseFloat(currentPrice) || 0;
+
+  if (high === 0 || low === 0 || high === low) return <EmptyState text="데이터 없음" />;
+
+  const position = ((current - low) / (high - low)) * 100;
+  const clampedPos = Math.max(0, Math.min(100, position));
+
+  return (
+    <div className="flex flex-col gap-3 w-full text-slate-900">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-black text-blue-400 uppercase tracking-tighter mb-0.5">52주 최저</p>
+          <p className="text-lg font-black tabular-nums text-blue-500">{low.toLocaleString()}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-0.5">현재 위치</p>
+          <p className="text-2xl font-black tabular-nums text-slate-900">{clampedPos.toFixed(0)}%</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-black text-red-400 uppercase tracking-tighter mb-0.5">52주 최고</p>
+          <p className="text-lg font-black tabular-nums text-red-500">{high.toLocaleString()}</p>
+        </div>
+      </div>
+
+      <div className="w-full h-4 rounded-full bg-slate-100 overflow-hidden relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-slate-300 to-red-500 opacity-30 rounded-full" />
+        <div className="absolute top-0 h-full w-2 bg-slate-900 rounded-full transition-all duration-700 shadow-md border border-white"
+          style={{ left: `${clampedPos}%`, transform: 'translateX(-50%)' }} />
+      </div>
+    </div>
+  );
+}
+
 // ── 종합 시그널 스코어 ──
 export function calcSignalScore(rsi, bb, momentum5m, candles) {
   let score = 50; // 기본 중립
@@ -545,7 +655,7 @@ export default function AnalysisTab({
   momentum5m
 }) {
   const displayCandles5m = candles5m ? candles5m.slice(-12) : [];
-  const displayDayCandles = dayCandles ? dayCandles.slice(-20) : [];
+  const displayDayCandles = dayCandles ? dayCandles.slice(-60) : [];
 
   const rsi = calcRSI(displayDayCandles);
   const bb = calcBollinger(displayDayCandles);
@@ -585,6 +695,23 @@ export default function AnalysisTab({
           </div>
         </div>
         <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-emerald-600/10 rounded-full blur-[60px]"></div>
+      </div>
+
+      {/* 2.5 주가 차트 (일봉) */}
+      <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
+        <div className="relative z-10 text-left font-sans flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp size={16} className="text-cyan-400" />
+            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Price Chart</h3>
+          </div>
+          <p className="text-xs text-slate-500 font-medium mb-2">
+            최근 약 2개월(60일) <span className="text-cyan-400 font-bold">일봉 추세</span>와 이동평균선(MA20)입니다.
+          </p>
+          <div className="mt-auto pt-2 w-full">
+            <CoinPriceChart dayCandles={displayDayCandles} />
+          </div>
+        </div>
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-cyan-400/5 rounded-full blur-[60px]"></div>
       </div>
 
       {/* 3. 5분 모멘텀 히스토리 (우상단) */}
@@ -632,6 +759,26 @@ export default function AnalysisTab({
           </p>
           <div className="mt-auto">
             <RSIGauge rsi={rsi} />
+          </div>
+        </div>
+      </div>
+
+      {/* 6. 52W Range */}
+      <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
+        <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp size={16} className="text-indigo-500" />
+            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">52W Range</h3>
+          </div>
+          <p className="text-xs text-slate-500 font-medium mb-3">
+            52주 최고/최저 대비 <span className="text-indigo-500 font-bold">현재 위치</span>입니다.
+          </p>
+          <div className="mt-auto">
+            <Week52Bar 
+              currentPrice={alt?.trade_price} 
+              high52w={alt?.highest_52_week_price} 
+              low52w={alt?.lowest_52_week_price} 
+            />
           </div>
         </div>
       </div>

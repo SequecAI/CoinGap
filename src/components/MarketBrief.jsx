@@ -19,6 +19,7 @@ export default function MarketBrief({ appMode, userInfo }) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [expandedPostId, setExpandedPostId] = useState(null);
 
   const marketType = appMode === 'stock' ? 'market_stock' : 'market_crypto';
   const isAdmin = userInfo?.email === ADMIN_EMAIL;
@@ -40,7 +41,8 @@ export default function MarketBrief({ appMode, userInfo }) {
 
   useEffect(() => {
     fetchMarketPosts();
-  }, [fetchMarketPosts]);
+    setExpandedPostId(null);
+  }, [fetchMarketPosts, currentPage]);
 
   const openCreateForm = () => {
     setFormMode('create');
@@ -185,26 +187,40 @@ export default function MarketBrief({ appMode, userInfo }) {
 
           {/* 과거 시황 목록 (2번째부터) */}
           {posts.length > 1 && (
-            <details className="group">
-              <summary className="text-[10px] font-black text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors">
-                이전 시황 보기 ({posts.length - 1}건)
-              </summary>
-              <div className="mt-3 space-y-3">
+            <div className="pt-2">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-px bg-slate-100 flex-1"></div>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">이전 시황 ({posts.length - 1}건)</span>
+                <div className="h-px bg-slate-100 flex-1"></div>
+              </div>
+              <div className="space-y-2">
                 {posts.slice(1 + (currentPage - 1) * postsPerPage, 1 + currentPage * postsPerPage).map(p => (
-                  <div key={p.postId} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-                    <div className="flex items-center justify-between mb-1">
-                      <h5 className="text-xs font-black text-slate-700 truncate">{p.title}</h5>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[9px] font-bold text-slate-400 tabular-nums">{p.createdAt?.split('T')[0]}</span>
-                        {isAdmin && (
-                          <>
-                            <button onClick={() => openEditForm(p)} className="text-[9px] font-bold text-indigo-400 hover:text-indigo-600">수정</button>
-                            <button onClick={() => handleDelete(p)} className="text-[9px] font-bold text-red-400 hover:text-red-600">삭제</button>
-                          </>
-                        )}
+                  <div key={p.postId} className="bg-slate-50/50 rounded-2xl overflow-hidden border border-slate-100 transition-all">
+                    <button 
+                      onClick={() => setExpandedPostId(expandedPostId === p.postId ? null : p.postId)}
+                      className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[9px] font-bold text-slate-400 tabular-nums block mb-0.5">{p.createdAt?.split('T')[0]}</span>
+                        <h5 className="text-xs font-black text-slate-700 truncate">{p.title}</h5>
                       </div>
-                    </div>
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed whitespace-pre-line line-clamp-3">{p.content}</p>
+                      <div className="flex items-center gap-2 shrink-0 ml-3">
+                        {isAdmin && (
+                          <div className="flex items-center gap-2 mr-1">
+                            <span onClick={(e) => { e.stopPropagation(); openEditForm(p); }} className="text-[9px] font-bold text-indigo-400 hover:text-indigo-600 cursor-pointer">수정</span>
+                            <span onClick={(e) => { e.stopPropagation(); handleDelete(p); }} className="text-[9px] font-bold text-red-400 hover:text-red-600 cursor-pointer">삭제</span>
+                          </div>
+                        )}
+                        {expandedPostId === p.postId ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+                      </div>
+                    </button>
+                    {expandedPostId === p.postId && (
+                      <div className="px-4 pb-4 border-t border-slate-100/50 pt-3">
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed whitespace-pre-line">
+                          {p.content}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ))}
                 
@@ -231,7 +247,7 @@ export default function MarketBrief({ appMode, userInfo }) {
                   </div>
                 )}
               </div>
-            </details>
+            </div>
           )}
 
           {/* 관리자: 작성/수정 폼 */}

@@ -524,11 +524,12 @@ export default function App() {
             candles5m={candles5m}
             dayCandles={dayCandles}
             orderbook={orderbook}
+            userInfo={userInfo}
           />
         )}
 
         {activeTab === 'studio' && appMode === 'stock' && (
-          <StockEditorTab stockData={stockData} />
+          <StockEditorTab stockData={stockData} userInfo={userInfo} />
         )}
 
         {/* 커뮤니티 모드 */}

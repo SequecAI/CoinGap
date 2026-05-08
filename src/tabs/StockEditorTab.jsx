@@ -43,7 +43,7 @@ function calcBollinger(candles, period = 20, multiplier = 2) {
   return { upper, lower, ma };
 }
 
-export default function StockEditorTab({ stockData }) {
+export default function StockEditorTab({ stockData, userInfo }) {
   const {
     selectedStock,
     currentPrice, changeRate, momentum, volume,
@@ -55,7 +55,7 @@ export default function StockEditorTab({ stockData }) {
   const stockName = selectedStock?.name || '';
   const stockCode = selectedStock?.code || '';
 
-  const { indicators, addIndicator, updateIndicator, removeIndicator } = useStockStudioIndicators();
+  const { indicators, addIndicator, updateIndicator, removeIndicator } = useStockStudioIndicators(userInfo?.userId);
 
   const [formula, setFormula] = useState("(50 - RSI_14) + (KOSPI_RATE - STOCK_RATE) * 5");
   const [indicatorName, setIndicatorName] = useState("RSI·시장 갭 신호");

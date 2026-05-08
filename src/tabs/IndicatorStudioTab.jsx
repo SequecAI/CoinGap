@@ -41,9 +41,9 @@ function calcBollinger(candles, period = 20, multiplier = 2) {
 export default function IndicatorStudioTab({
   tickers, markets, selectedAlt, altName,
   btcRate, altRate, momentum5m, volRatio, zScoreValue,
-  candles5m, dayCandles, orderbook
+  candles5m, dayCandles, orderbook, userInfo
 }) {
-  const { indicators, addIndicator, updateIndicator, removeIndicator } = useStudioIndicators();
+  const { indicators, addIndicator, updateIndicator, removeIndicator } = useStudioIndicators(userInfo?.userId);
 
   // ── 에디터 내부 state ──
   const [formula, setFormula] = useState("Z_SCORE - (RSI_14 - 50) * 0.1");

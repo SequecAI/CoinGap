@@ -59,10 +59,11 @@ export function useAuth() {
       })
       .then(res => res.json())
       .then(data => {
-        // 백엔드에 커스텀 닉네임이 저장되어 있다면 로컬 상태를 덮어씀
-        if (data.nickname && data.nickname !== info.nickname) {
-          setUserInfo(prev => prev ? { ...prev, nickname: data.nickname } : prev);
-        }
+        // 백엔드에 저장된 모든 유저 정보(닉네임, 저장된 지표 등)를 로컬 상태에 동기화
+        setUserInfo(prev => {
+          if (!prev) return null;
+          return { ...prev, ...data };
+        });
       })
       .catch((err) => console.warn('[useAuth] 유저 동기화 실패:', err));
 

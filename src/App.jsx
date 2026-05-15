@@ -124,7 +124,7 @@ export default function App() {
                   pathParts[0] === 'community' ? 'community' : 'stock';
   
   // URL에 탭이 명시되어 있으면 그것을 쓰고, 없으면 기본값 사용
-  const fallbackTab = appMode === 'community' ? 'board' : 'analysis';
+  const fallbackTab = appMode === 'community' ? 'indicator' : 'analysis';
   const activeTab = pathParts[1] || fallbackTab;
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);

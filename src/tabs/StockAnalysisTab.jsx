@@ -1,5 +1,5 @@
-import React from 'react';
-import { Crosshair, Shield, Activity, Zap, Gauge, TrendingUp, TrendingDown, Users } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Crosshair, Shield, Activity, Zap, Gauge, TrendingUp, TrendingDown, Users, Battery } from 'lucide-react';
 import {
   SignalScorePanel,
   BollingerBandPanel,
@@ -263,6 +263,273 @@ function ValuationPanel({ per, pbr, eps, bps, dividendYield, foreignRate }) {
   );
 }
 
+// ── Squeeze Energy 패널 ──
+const TIMEFRAMES = [
+  { key: '5m', label: '5분', minutes: 5, count: 60 },
+  { key: '10m', label: '10분', minutes: 10, count: 60 },
+  { key: '30m', label: '30분', minutes: 30, count: 60 },
+  { key: '1h', label: '1시간', minutes: 60, count: 60 },
+  { key: '1d', label: '1일', minutes: 1440, count: 60 },
+];
+
+function calcATR(candles, period = 14) {
+  if (!candles || candles.length < period + 1) return null;
+  const trueRanges = [];
+  for (let i = 1; i < candles.length; i++) {
+    const high = candles[i].high_price;
+    const low = candles[i].low_price;
+    const prevClose = candles[i - 1].trade_price;
+    const tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+    trueRanges.push(tr);
+  }
+  // 최근 period개와 장기 평균
+  const recentATR = trueRanges.slice(-period).reduce((a, b) => a + b, 0) / period;
+  const longATR = trueRanges.reduce((a, b) => a + b, 0) / trueRanges.length;
+  return { recentATR, longATR, trueRanges };
+}
+
+export function calcSqueezeEnergy(candles) {
+  if (!candles || candles.length < 20) {
+    return { score: 0, level: 'low', squeezeBars: 0, priceRatio: 1, volRatio: 1, direction: 'neutral' };
+  }
+
+  // 1) ATR 수축도 (40%)
+  const atrData = calcATR(candles, 14);
+  if (!atrData || atrData.longATR === 0) {
+    return { score: 0, level: 'low', squeezeBars: 0, priceRatio: 1, volRatio: 1, direction: 'neutral' };
+  }
+  const priceRatio = atrData.recentATR / atrData.longATR; // 낮을수록 수축
+  const priceScore = Math.max(0, Math.min(100, (1 - priceRatio) * 150)); // 0~100
+
+  // 2) 거래량 수축도 (30%)
+  const volumes = candles.map(c => c.candle_acc_trade_volume || 0);
+  const shortVolPeriod = Math.min(5, Math.floor(volumes.length / 4));
+  const recentVol = volumes.slice(-shortVolPeriod).reduce((a, b) => a + b, 0) / shortVolPeriod;
+  const longVol = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+  const volRatio = longVol > 0 ? recentVol / longVol : 1; // 낮을수록 수축
+  const volScore = Math.max(0, Math.min(100, (1 - volRatio) * 150));
+
+  // 3) 수축 지속 기간 (20%)
+  let squeezeBars = 0;
+  const { trueRanges } = atrData;
+  const avgTR = trueRanges.reduce((a, b) => a + b, 0) / trueRanges.length;
+  for (let i = trueRanges.length - 1; i >= 0; i--) {
+    if (trueRanges[i] < avgTR * 0.85) {
+      squeezeBars++;
+    } else {
+      break;
+    }
+  }
+  const maxBars = Math.floor(candles.length * 0.6);
+  const durationScore = Math.min(100, (squeezeBars / Math.max(maxBars, 5)) * 100);
+
+  // 4) 현재 위치 기반 상태 판별
+  const maxPrice = Math.max(...candles.map(c => c.high_price));
+  const minPrice = Math.min(...candles.map(c => c.low_price));
+  const currentPrice = candles[candles.length - 1].trade_price;
+  const positionPercent = maxPrice === minPrice ? 50 : ((currentPrice - minPrice) / (maxPrice - minPrice)) * 100;
+
+  let positionType = 'mid';
+  let positionLabel = '';
+  let hintMsg = '';
+
+  if (positionPercent >= 70) {
+    positionType = 'high';
+    positionLabel = '고점 부근 수축';
+    hintMsg = '상방 돌파 또는 단기 하락 주의';
+  } else if (positionPercent <= 30) {
+    positionType = 'low';
+    positionLabel = '저점 부근 수축';
+    hintMsg = '바닥 매집 후 반등(상승) 가능성';
+  } else {
+    positionType = 'mid';
+    positionLabel = '중간 가격대 수축';
+    hintMsg = 'MA20 돌파 방향을 주시하세요';
+  }
+
+  // 방향성 점수를 빼고, 기본 수축 지표들에 가중치 재분배: 가격(50%), 거래량(30%), 지속시간(20%)
+  const totalScore = Math.min(100, Math.max(0,
+    priceScore * 0.5 + volScore * 0.3 + durationScore * 0.2
+  ));
+
+  const level = totalScore >= 70 ? 'high' : totalScore >= 40 ? 'mid' : 'low';
+
+  return { score: totalScore, level, squeezeBars, priceRatio, volRatio, positionType, positionLabel, hintMsg };
+}
+
+export function SqueezeEnergyPanel({ stockCode, dayCandles }) {
+  const [selectedTF, setSelectedTF] = useState('1d');
+  const [candles, setCandles] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [initialLoaded, setInitialLoaded] = useState(false);
+  const dayCandlesRef = useRef(dayCandles);
+
+  // dayCandles 레퍼런스를 ref로 동기화 (리렌더 방지)
+  useEffect(() => {
+    dayCandlesRef.current = dayCandles;
+    // 현재 일봉이 선택되어 있으면 데이터 갱신
+    if (selectedTF === '1d' && dayCandles && dayCandles.length > 0) {
+      setCandles(dayCandles);
+      setInitialLoaded(true);
+    }
+  }, [dayCandles, selectedTF]);
+
+  const fetchCandles = useCallback(async (tf) => {
+    const tfConfig = TIMEFRAMES.find(t => t.key === tf);
+    if (!tfConfig || !stockCode) return;
+
+    // 일봉은 이미 있는 데이터 사용
+    if (tf === '1d') {
+      if (dayCandlesRef.current && dayCandlesRef.current.length > 0) {
+        setCandles(dayCandlesRef.current);
+        setInitialLoaded(true);
+      }
+      return;
+    }
+
+    if (!initialLoaded) setLoading(true);
+    try {
+      const url = `/naver-fchart/sise.nhn?symbol=${stockCode}&requestType=0&count=${tfConfig.count * (tfConfig.minutes <= 5 ? 5 : tfConfig.minutes)}&timeframe=minute`;
+      const xmlRes = await fetch(url).then(r => r.text()).catch(() => null);
+
+      if (xmlRes) {
+        const matches = [...xmlRes.matchAll(/<item data="([^"]+)"/g)];
+        if (matches.length > 0) {
+          const allMinutes = matches.map(m => {
+            const parts = m[1].split('|');
+            const close = parseFloat(parts[4]);
+            return {
+              opening_price: parseFloat(parts[1]) || close,
+              high_price: parseFloat(parts[2]) || close,
+              low_price: parseFloat(parts[3]) || close,
+              trade_price: close,
+              candle_acc_trade_volume: parseFloat(parts[5]) || 0,
+            };
+          });
+
+          const groupSize = tfConfig.minutes;
+          const reversed = [...allMinutes].reverse();
+          const grouped = [];
+          for (let i = 0; i < reversed.length; i += groupSize) {
+            const chunk = reversed.slice(i, i + groupSize);
+            if (chunk.length === 0) break;
+            grouped.push({
+              opening_price: chunk[chunk.length - 1].opening_price,
+              high_price: Math.max(...chunk.map(c => c.high_price)),
+              low_price: Math.min(...chunk.map(c => c.low_price)),
+              trade_price: chunk[0].trade_price,
+              candle_acc_trade_volume: chunk.reduce((sum, c) => sum + c.candle_acc_trade_volume, 0),
+            });
+          }
+          setCandles(grouped.reverse());
+        }
+      }
+    } catch (e) {
+      console.error('Squeeze fetch error', e);
+    }
+    setLoading(false);
+    setInitialLoaded(true);
+  }, [stockCode, initialLoaded]);
+
+  // 타임프레임 변경 시에만 fetch
+  useEffect(() => {
+    fetchCandles(selectedTF);
+  }, [selectedTF, stockCode]); // fetchCandles 제거하여 무한루프 방지
+
+  const squeeze = candles ? calcSqueezeEnergy(candles) : null;
+
+  const levelConfig = {
+    high: { label: '에너지 과충전', color: '#ef4444', bg: 'bg-red-500/10', tc: 'text-red-500', bc: 'border-red-500/30', barColor: 'from-red-500 to-orange-400', emoji: '🔴' },
+    mid:  { label: '에너지 축적 중', color: '#f59e0b', bg: 'bg-amber-500/10', tc: 'text-amber-500', bc: 'border-amber-500/30', barColor: 'from-amber-500 to-yellow-400', emoji: '🟡' },
+    low:  { label: '정리 중', color: '#94a3b8', bg: 'bg-slate-400/10', tc: 'text-slate-400', bc: 'border-slate-400/30', barColor: 'from-slate-400 to-slate-300', emoji: '🟢' },
+  };
+
+  const cfg = squeeze ? levelConfig[squeeze.level] : levelConfig.low;
+
+  return (
+    <div className="flex flex-col gap-4 w-full">
+      {/* 타임프레임 셀렉터 */}
+      {/* Timeframe Selector */}
+      <div className="flex flex-wrap gap-2">
+        {TIMEFRAMES.map(tf => (
+          <button
+            key={tf.key}
+            onClick={() => setSelectedTF(tf.key)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+              selectedTF === tf.key
+                ? 'bg-slate-800 text-white border-slate-800 shadow-md'
+                : 'bg-slate-800/30 text-slate-400 border-slate-700 hover:border-slate-600 hover:text-slate-300'
+            }`}
+          >
+            {tf.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-slate-500 font-bold text-sm animate-pulse">데이터 분석 중...</p>
+        </div>
+      ) : !squeeze ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-slate-500 font-bold text-sm">데이터가 부족합니다.</p>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">{cfg.emoji}</span>
+              <span className={`text-sm font-black uppercase tracking-tighter ${cfg.tc} px-2 py-0.5 rounded border ${cfg.bg} ${cfg.bc}`}>
+                {cfg.label}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-4xl font-black tabular-nums text-white">{squeeze.score.toFixed(0)}</span>
+              <span className="text-sm text-slate-500 font-bold">/ 100</span>
+            </div>
+          </div>
+
+          <div className="w-full h-3 rounded-full bg-slate-800 overflow-hidden relative">
+            <div
+              className={`h-full rounded-full bg-gradient-to-r ${cfg.barColor} transition-all duration-700`}
+              style={{ width: `${Math.max(2, squeeze.score)}%` }}
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mb-0.5">변동폭 수축</p>
+              <p className={`text-lg font-black tabular-nums ${squeeze.priceRatio < 0.5 ? 'text-red-500' : squeeze.priceRatio < 0.8 ? 'text-amber-500' : 'text-slate-400'}`}>
+                {((1 - squeeze.priceRatio) * 100).toFixed(0)}%
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mb-0.5">거래량 수축</p>
+              <p className={`text-lg font-black tabular-nums ${squeeze.volRatio < 0.5 ? 'text-red-500' : squeeze.volRatio < 0.8 ? 'text-amber-500' : 'text-slate-400'}`}>
+                {((1 - squeeze.volRatio) * 100).toFixed(0)}%
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mb-0.5">수축 지속</p>
+              <p className="text-lg font-black tabular-nums text-violet-400">
+                {squeeze.squeezeBars}<span className="text-[10px] text-slate-500 ml-0.5">봉</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 border-t border-white/10 pt-3">
+            <span>현재 위치:</span>
+            <span className={squeeze.positionType === 'high' ? 'text-orange-400' : squeeze.positionType === 'low' ? 'text-emerald-400' : 'text-blue-400'}>
+              {squeeze.positionLabel}
+            </span>
+            <span className="ml-auto text-[9px] text-slate-500">{squeeze.hintMsg}</span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── 주식 가격 패널 ──
 function StockPricePanel({ stockName, currentPrice, changeRate, changeDirection, marketCap, volume }) {
   if (!currentPrice) return (
@@ -325,6 +592,7 @@ export default function StockAnalysisTab({
   dayCandles,
   momentum,
   stockName,
+  stockCode,
   currentPrice,
   changeRate,
   changeDirection,
@@ -389,7 +657,7 @@ export default function StockAnalysisTab({
         <IndexMiniCard name="KOSDAQ" price={kosdaqPrice} change={kosdaqChange} direction={kosdaqDirection} />
       </div>
 
-      {/* 3. Bollinger Bands & Price Chart (2행) */}
+      {/* 3. Bollinger Bands & Price Momentum (2행) */}
       <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
         <div className="relative z-10 text-left font-sans flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -407,6 +675,28 @@ export default function StockAnalysisTab({
       </div>
 
       <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
+        <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
+          <div className="flex items-center gap-2 mb-1">
+            <Zap size={16} className="text-yellow-400" />
+            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Price Momentum</h3>
+          </div>
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 my-4">
+            <span className={`text-5xl font-black tracking-tighter tabular-nums ${momentum >= 0 ? 'text-white' : 'text-blue-400'}`}>
+              {momentum.toFixed(2)}%
+            </span>
+            <div className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${momentum >= 0 ? 'bg-red-500/10 text-red-400 border-red-500/30' : 'bg-blue-500/10 text-blue-400 border-blue-500/30'}`}>
+              {momentum >= 0 ? 'UP' : 'DOWN'}
+            </div>
+          </div>
+          <p className="text-xs text-slate-400 font-medium leading-relaxed border-t border-white/10 pt-4 font-sans">
+            {stockName}의 <span className="text-blue-400 font-bold">최근 5분 가격 변동률</span>입니다. 시장의 즉각적인 에너지와 단기 방향성을 포착합니다.
+          </p>
+        </div>
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-yellow-400/5 rounded-full blur-[60px]"></div>
+      </div>
+
+      {/* 4. Price Chart & Squeeze Energy (3행) */}
+      <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
         <div className="relative z-10 text-left font-sans flex-1">
           <div className="flex items-center gap-2 mb-1">
             <Activity size={16} className="text-cyan-400" />
@@ -422,43 +712,20 @@ export default function StockAnalysisTab({
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-cyan-400/5 rounded-full blur-[60px]"></div>
       </div>
 
-      {/* 4. Price Momentum & Z-Score (3행) */}
       <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
-        <div className="relative z-10 text-left font-sans flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <Zap size={16} className="text-yellow-400" />
-            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Price Momentum</h3>
-          </div>
-          <div className="flex items-baseline gap-3 mb-4">
-            <span className={`text-5xl font-black tracking-tighter tabular-nums ${momentum >= 0 ? 'text-white' : 'text-blue-400'}`}>
-              {momentum.toFixed(2)}%
-            </span>
-            <div className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${momentum >= 0 ? 'bg-red-500/10 text-red-400 border-red-500/30' : 'bg-blue-500/10 text-blue-400 border-blue-500/30'}`}>
-              {momentum >= 0 ? 'UP' : 'DOWN'}
-            </div>
-          </div>
-          <p className="text-xs text-slate-400 font-medium leading-relaxed border-t border-white/10 pt-4 font-sans">
-            {stockName}의 <span className="text-blue-400 font-bold">최근 5분 가격 변동률</span>입니다. 시장의 즉각적인 에너지와 단기 방향성을 포착합니다.
-          </p>
-        </div>
-        <div className="absolute -top-12 -right-12 w-48 h-48 bg-yellow-400/5 rounded-full blur-[60px]"></div>
-      </div>
-
-      <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
         <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
           <div className="flex items-center gap-2 mb-1">
-            <Gauge size={16} className="text-orange-500" />
-            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Z-Score</h3>
+            <Battery size={16} className="text-violet-400" />
+            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Squeeze Energy</h3>
           </div>
           <p className="text-xs text-slate-500 font-medium mb-3">
-            20일 평균선(MA20) 대비 <span className="text-orange-500 font-bold">표준편차(σ) 괴리도</span>입니다. +2.0↑ 과매수, -2.0↓ 과매도입니다.
+            {stockName}의 <span className="text-violet-400 font-bold">눌림목 에너지 축적</span> 상태입니다. 변동폭·거래량 수축이 지속되면 큰 움직임이 임박할 수 있습니다.
           </p>
-          <div className="my-auto flex items-center justify-center">
-            <span className={`text-6xl font-black tracking-tighter tabular-nums ${getZScoreColor(zScoreValue)}`}>
-              {zScoreValue > 0 ? '+' : ''}{zScoreValue}
-            </span>
+          <div className="mt-auto">
+            <SqueezeEnergyPanel stockCode={stockCode} dayCandles={displayDayCandles} />
           </div>
         </div>
+        <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-violet-600/10 rounded-full blur-[60px]"></div>
       </div>
 
       {/* 5. Trade Intensity & RSI-14 */}
@@ -536,6 +803,24 @@ export default function StockAnalysisTab({
           </p>
           <div className="mt-auto">
             <Week52Bar currentPrice={currentPrice} high52w={high52w} low52w={low52w} />
+          </div>
+        </div>
+      </div>
+
+      {/* 8. Z-Score */}
+      <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
+        <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
+          <div className="flex items-center gap-2 mb-1">
+            <Gauge size={16} className="text-orange-500" />
+            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Z-Score</h3>
+          </div>
+          <p className="text-xs text-slate-500 font-medium mb-3">
+            20일 평균선(MA20) 대비 <span className="text-orange-500 font-bold">표준편차(σ) 괴리도</span>입니다. +2.0↑ 과매수, -2.0↓ 과매도입니다.
+          </p>
+          <div className="my-auto flex items-center justify-center">
+            <span className={`text-6xl font-black tracking-tighter tabular-nums ${getZScoreColor(zScoreValue)}`}>
+              {zScoreValue > 0 ? '+' : ''}{zScoreValue}
+            </span>
           </div>
         </div>
       </div>

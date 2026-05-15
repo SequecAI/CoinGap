@@ -1,6 +1,7 @@
-import React from 'react';
-import { Zap, Activity, Gauge, Shield, Crosshair, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Zap, Activity, Gauge, Shield, Crosshair, TrendingUp, Battery } from 'lucide-react';
 import CoinPricePanel from '../components/CoinPricePanel';
+import { calcSqueezeEnergy } from './StockAnalysisTab';
 
 // ── SVG 바 차트 컴포넌트 ──
 export function VolumeBarChart({ candles }) {
@@ -119,6 +120,154 @@ export function TradeIntensityGauge({ candles }) {
         <span>양봉 {candleRatio}</span>
         <span>거래량 기준 추정</span>
       </div>
+    </div>
+  );
+}
+
+// ── Squeeze Energy 게이지 (Crypto) ──
+const TIMEFRAMES = [
+  { key: '5m', label: '5분', unit: 5 },
+  { key: '10m', label: '10분', unit: 10 },
+  { key: '30m', label: '30분', unit: 30 },
+  { key: '1h', label: '1시간', unit: 60 },
+  { key: '4h', label: '4시간', unit: 240 },
+  { key: '1d', label: '1일', unit: 'days' },
+];
+
+export function CryptoSqueezeEnergyPanel({ market, dayCandles }) {
+  const [selectedTF, setSelectedTF] = useState('1d');
+  const [candles, setCandles] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [initialLoaded, setInitialLoaded] = useState(false);
+  const dayCandlesRef = useRef(dayCandles);
+
+  useEffect(() => {
+    dayCandlesRef.current = dayCandles;
+    if (selectedTF === '1d' && dayCandles && dayCandles.length > 0) {
+      setCandles(dayCandles);
+      setInitialLoaded(true);
+    }
+  }, [dayCandles, selectedTF]);
+
+  const fetchCandles = useCallback(async (tf) => {
+    const tfConfig = TIMEFRAMES.find(t => t.key === tf);
+    if (!tfConfig || !market) return;
+
+    if (tf === '1d') {
+      if (dayCandlesRef.current && dayCandlesRef.current.length > 0) {
+        setCandles(dayCandlesRef.current);
+        setInitialLoaded(true);
+      }
+      return;
+    }
+
+    if (!initialLoaded) setLoading(true);
+    try {
+      const url = `https://api.upbit.com/v1/candles/minutes/${tfConfig.unit}?market=${market}&count=60`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setCandles(data.reverse());
+      }
+    } catch (e) {
+      console.error('Crypto Squeeze fetch error', e);
+    }
+    setLoading(false);
+    setInitialLoaded(true);
+  }, [market, initialLoaded]);
+
+  useEffect(() => {
+    fetchCandles(selectedTF);
+  }, [selectedTF, market]);
+
+  const squeeze = candles ? calcSqueezeEnergy(candles) : null;
+
+  const levelConfig = {
+    high: { label: '에너지 과충전', color: '#ef4444', bg: 'bg-red-500/10', tc: 'text-red-500', bc: 'border-red-500/30', barColor: 'from-red-500 to-orange-400', emoji: '🔴' },
+    mid:  { label: '에너지 축적 중', color: '#f59e0b', bg: 'bg-amber-500/10', tc: 'text-amber-500', bc: 'border-amber-500/30', barColor: 'from-amber-500 to-yellow-400', emoji: '🟡' },
+    low:  { label: '정리 중', color: '#94a3b8', bg: 'bg-slate-400/10', tc: 'text-slate-400', bc: 'border-slate-400/30', barColor: 'from-slate-400 to-slate-300', emoji: '🟢' },
+  };
+  const currentLevel = squeeze ? levelConfig[squeeze.level] : levelConfig.low;
+
+  return (
+    <div className="flex flex-col gap-4 h-full">
+      {/* Timeframe Selector */}
+      <div className="flex flex-wrap gap-2">
+        {TIMEFRAMES.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setSelectedTF(t.key)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+              selectedTF === t.key
+                ? 'bg-slate-800 text-white border-slate-800 shadow-md'
+                : 'bg-slate-800/30 text-slate-400 border-slate-700 hover:border-slate-600 hover:text-slate-300'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-slate-500 font-bold text-sm animate-pulse">데이터 분석 중...</p>
+        </div>
+      ) : !squeeze ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-slate-500 font-bold text-sm">데이터가 부족합니다.</p>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">{currentLevel.emoji}</span>
+              <span className={`text-sm font-black uppercase tracking-tighter ${currentLevel.tc} px-2 py-0.5 rounded border ${currentLevel.bg} ${currentLevel.bc}`}>
+                {currentLevel.label}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-4xl font-black tabular-nums text-white">{squeeze.score.toFixed(0)}</span>
+              <span className="text-sm text-slate-500 font-bold">/ 100</span>
+            </div>
+          </div>
+
+          <div className="w-full h-3 rounded-full bg-slate-800 overflow-hidden relative">
+            <div
+              className={`h-full rounded-full bg-gradient-to-r ${currentLevel.barColor} transition-all duration-700`}
+              style={{ width: `${Math.max(2, squeeze.score)}%` }}
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mb-0.5">변동폭 수축</p>
+              <p className={`text-lg font-black tabular-nums ${squeeze.priceRatio < 0.5 ? 'text-red-500' : squeeze.priceRatio < 0.8 ? 'text-amber-500' : 'text-slate-400'}`}>
+                {((1 - squeeze.priceRatio) * 100).toFixed(0)}%
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mb-0.5">거래량 수축</p>
+              <p className={`text-lg font-black tabular-nums ${squeeze.volRatio < 0.5 ? 'text-red-500' : squeeze.volRatio < 0.8 ? 'text-amber-500' : 'text-slate-400'}`}>
+                {((1 - squeeze.volRatio) * 100).toFixed(0)}%
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mb-0.5">수축 지속</p>
+              <p className="text-lg font-black tabular-nums text-violet-400">
+                {squeeze.squeezeBars}<span className="text-[10px] text-slate-500 ml-0.5">봉</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 border-t border-white/10 pt-3">
+            <span>현재 위치:</span>
+            <span className={squeeze.positionType === 'high' ? 'text-orange-400' : squeeze.positionType === 'low' ? 'text-emerald-400' : 'text-blue-400'}>
+              {squeeze.positionLabel}
+            </span>
+            <span className="ml-auto text-[9px] text-slate-500">{squeeze.hintMsg}</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -680,7 +829,7 @@ export default function AnalysisTab({
         <CoinPricePanel coin={alt} coinName={altName} coinVol={altVol} />
       </div>
 
-      {/* 2. 볼린저 밴드 (좌상단) */}
+      {/* 2. Bollinger Bands (좌상단) */}
       <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
         <div className="relative z-10 text-left font-sans flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -695,23 +844,6 @@ export default function AnalysisTab({
           </div>
         </div>
         <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-emerald-600/10 rounded-full blur-[60px]"></div>
-      </div>
-
-      {/* 2.5 주가 차트 (일봉) */}
-      <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
-        <div className="relative z-10 text-left font-sans flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp size={16} className="text-cyan-400" />
-            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Price Chart</h3>
-          </div>
-          <p className="text-xs text-slate-500 font-medium mb-2">
-            최근 약 2개월(60일) <span className="text-cyan-400 font-bold">일봉 추세</span>와 이동평균선(MA20)입니다.
-          </p>
-          <div className="mt-auto pt-2 w-full">
-            <CoinPriceChart dayCandles={displayDayCandles} />
-          </div>
-        </div>
-        <div className="absolute -top-12 -right-12 w-48 h-48 bg-cyan-400/5 rounded-full blur-[60px]"></div>
       </div>
 
       {/* 3. 5분 모멘텀 히스토리 (우상단) */}
@@ -729,6 +861,40 @@ export default function AnalysisTab({
           </div>
         </div>
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-cyan-400/5 rounded-full blur-[60px]"></div>
+      </div>
+
+      {/* 4. 주가 차트 (일봉) */}
+      <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
+        <div className="relative z-10 text-left font-sans flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp size={16} className="text-cyan-400" />
+            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Price Chart</h3>
+          </div>
+          <p className="text-xs text-slate-500 font-medium mb-2">
+            최근 약 2개월(60일) <span className="text-cyan-400 font-bold">일봉 추세</span>와 이동평균선(MA20)입니다.
+          </p>
+          <div className="mt-auto pt-2 w-full">
+            <CoinPriceChart dayCandles={displayDayCandles} />
+          </div>
+        </div>
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-cyan-400/5 rounded-full blur-[60px]"></div>
+      </div>
+
+      {/* 5. Squeeze Energy */}
+      <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
+        <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
+          <div className="flex items-center gap-2 mb-1">
+            <Battery size={16} className="text-violet-400" />
+            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Squeeze Energy</h3>
+          </div>
+          <p className="text-xs text-slate-500 font-medium mb-3">
+            {altName}의 <span className="text-violet-400 font-bold">눌림목 에너지 축적</span> 상태입니다. 변동폭·거래량 수축이 지속되면 큰 움직임이 임박할 수 있습니다.
+          </p>
+          <div className="mt-auto">
+            <CryptoSqueezeEnergyPanel market={alt?.market} dayCandles={displayDayCandles} />
+          </div>
+        </div>
+        <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-violet-600/10 rounded-full blur-[60px]"></div>
       </div>
 
       {/* 4. 체결 강도 (좌하단) */}

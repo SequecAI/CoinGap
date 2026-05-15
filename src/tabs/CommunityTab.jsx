@@ -335,8 +335,9 @@ function BacktestBadge({ backtest }) {
 }
 
 // ── 지표 랭킹 카드 ──
-function IndicatorRankCard({ post, rank, isLoggedIn }) {
+function IndicatorRankCard({ post, rank, userInfo }) {
   const [expanded, setExpanded] = useState(false);
+  const isLoggedIn = !!userInfo;
   const avg = calcAvgWinRate(post.backtest);
   const medalColors = ['bg-amber-400 text-white', 'bg-slate-400 text-white', 'bg-amber-700 text-white'];
   const medalBg = rank <= 3 ? medalColors[rank - 1] : 'bg-slate-200 text-slate-600';
@@ -363,19 +364,27 @@ function IndicatorRankCard({ post, rank, isLoggedIn }) {
 
   const handleCopyIndicator = (e) => {
     e.stopPropagation();
-    if (!isLoggedIn) {
+    if (!isLoggedIn || !userInfo?.userId) {
       alert('로그인이 필요한 기능입니다.\n상단의 Google 로그인 버튼을 눌러주세요.');
       return;
     }
-    const storageKey = post.indicatorMode === 'stock' ? STOCK_STORAGE_KEY : CRYPTO_STORAGE_KEY;
+
+    const userId = userInfo.userId;
+    const isStock = post.indicatorMode === 'stock';
+    const baseKey = isStock ? STOCK_STORAGE_KEY : CRYPTO_STORAGE_KEY;
+    // 로그인 상태이므로 userId가 붙은 키를 우선 사용
+    const storageKey = `${baseKey}_${userId}`;
+    
     const saved = readLocalIndicators(storageKey);
     if (saved.length >= 5) {
       alert(`보관함이 가득 찼습니다. (최대 5개)\nEditor 탭에서 기존 지표를 삭제해주세요.`);
       return;
     }
+
     const newName = post.title + " (복사됨)";
+    // 현재 사용자 보관함 기준으로 중복 체크
     if (saved.some(ind => ind.name === newName)) {
-      alert(`이미 '${newName}' 이름의 지표가 보관함에 있습니다.\n이름이 중복되어 복사할 수 없습니다.`);
+      alert(`이미 '${newName}' 이름의 지표가 보관함에 있습니다.\n이미 복사된 지표입니다.`);
       return;
     }
 
@@ -387,8 +396,25 @@ function IndicatorRankCard({ post, rank, isLoggedIn }) {
       backtest: post.backtest,
       createdAt: new Date().toISOString()
     };
-    localStorage.setItem(storageKey, JSON.stringify({ indicators: [...saved, newIndicator] }));
-    alert('보관함에 지표가 복사되었습니다! Editor 탭에서 확인하세요.');
+
+    const newIndicators = [...saved, newIndicator];
+    
+    // 1. 사용자 전용 로컬 스토리지 업데이트
+    localStorage.setItem(storageKey, JSON.stringify({ indicators: newIndicators }));
+    
+    // 2. 현재 로그인 세션(coinGap_auth) 업데이트 (에디터 탭 즉시 반영용)
+    const authData = localStorage.getItem('coinGap_auth');
+    if (authData) {
+      const parsedAuth = JSON.parse(authData);
+      if (parsedAuth.userId === userId) {
+        // 모드에 맞는 지표 리스트 업데이트 (useStudioIndicators에서 사용하는 구조에 맞춤)
+        // 주의: useStudioIndicators는 단일 모드만 관리하므로, 세션 데이터의 indicators 필드를 공유함
+        parsedAuth.indicators = newIndicators;
+        localStorage.setItem('coinGap_auth', JSON.stringify(parsedAuth));
+      }
+    }
+
+    alert('보관함에 지표가 복사되었습니다! Editor 탭에서 즉시 확인 가능합니다.');
   };
 
   return (
@@ -472,8 +498,12 @@ function IndicatorShareForm({ userInfo, onSubmit }) {
 
   const indicators = useMemo(() => {
     if (!mode) return [];
-    return readLocalIndicators(mode === 'crypto' ? CRYPTO_STORAGE_KEY : STOCK_STORAGE_KEY);
-  }, [mode]);
+    const baseKey = mode === 'crypto' ? CRYPTO_STORAGE_KEY : STOCK_STORAGE_KEY;
+    const userId = userInfo?.userId;
+    // 로그인 상태면 전용 키, 아니면 공용 키
+    const storageKey = userId ? `${baseKey}_${userId}` : baseKey;
+    return readLocalIndicators(storageKey);
+  }, [mode, showForm, userInfo]);
 
   const selected = indicators.find(i => i.id === selectedId);
 
@@ -757,7 +787,7 @@ export default function CommunityTab({ isLoggedIn, userInfo, subTab, onSubTabCha
             {isLoading && posts.length === 0 ? (
               <div className="py-4 text-center text-xs font-bold text-slate-400">불러오는 중...</div>
             ) : rankedPosts.length > 0 ? (
-              rankedPosts.map((p, i) => <IndicatorRankCard key={p.postId} post={p} rank={i + 1} isLoggedIn={isLoggedIn} />)
+              rankedPosts.map((p, i) => <IndicatorRankCard key={p.postId} post={p} rank={i + 1} userInfo={userInfo} />)
             ) : (
               <div className="py-4 text-center text-xs font-bold text-slate-400">랭킹 데이터가 없습니다.</div>
             )}

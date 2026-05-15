@@ -1,7 +1,8 @@
 import React from 'react';
-import { Settings, Crosshair, Shield, Zap, Gauge, Activity, TrendingUp, Users, BarChart2 } from 'lucide-react';
+import { Settings, Crosshair, Shield, Zap, Gauge, Activity, TrendingUp, Users, BarChart2, Battery } from 'lucide-react';
 import { useCustomSettings } from '../hooks/useCustomSettings';
 import { RSIGauge, BollingerBandPanel, TradeIntensityGauge, EmptyState } from './AnalysisTab';
+import { SqueezeEnergyPanel } from './StockAnalysisTab';
 
 function parseNum(str) {
   if (str === undefined || str === null) return 0;
@@ -215,7 +216,7 @@ function ToggleButton({ active, onClick, label }) {
 }
 
 export default function StockCustomViewTab({
-  dayCandles, momentum, stockName, currentPrice, changeRate, changeDirection,
+  dayCandles, momentum, stockName, stockCode, currentPrice, changeRate, changeDirection,
   marketCap, per, pbr, eps, bps, dividendYield, foreignRate, high52w, low52w,
   dealTrends,
   minuteCandles,
@@ -317,14 +318,15 @@ export default function StockCustomViewTab({
         </div>
         <div className="flex flex-wrap gap-2">
           <ToggleButton active={indicators.bollinger} onClick={() => toggleIndicator('bollinger')} label="Bollinger Bands" />
-          <ToggleButton active={indicators.momentum} onClick={() => toggleIndicator('momentum')} label="Price Chart" />
           <ToggleButton active={indicators.priceMomentum} onClick={() => toggleIndicator('priceMomentum')} label="Price Momentum" />
-          <ToggleButton active={indicators.zscore} onClick={() => toggleIndicator('zscore')} label="Z-Score" />
+          <ToggleButton active={indicators.momentum} onClick={() => toggleIndicator('momentum')} label="Price Chart" />
+          <ToggleButton active={indicators.squeeze} onClick={() => toggleIndicator('squeeze')} label="Squeeze Energy" />
+          <ToggleButton active={indicators.intensity} onClick={() => toggleIndicator('intensity')} label="Trade Intensity" />
           <ToggleButton active={indicators.rsi} onClick={() => toggleIndicator('rsi')} label="RSI-14" />
           <ToggleButton active={indicators.stochrsi} onClick={() => toggleIndicator('stochrsi')} label="Stoch RSI" />
           <ToggleButton active={indicators.mfi} onClick={() => toggleIndicator('mfi')} label="MFI-14" />
-          <ToggleButton active={indicators.intensity} onClick={() => toggleIndicator('intensity')} label="Trade Intensity" />
           <ToggleButton active={indicators.macd} onClick={() => toggleIndicator('macd')} label="MACD (12,26,9)" />
+          <ToggleButton active={indicators.zscore} onClick={() => toggleIndicator('zscore')} label="Z-Score" />
         </div>
       </div>
 
@@ -339,20 +341,11 @@ export default function StockCustomViewTab({
             </div>
           </div>
         )}
-        {indicators.momentum && (
-          <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl border border-white/5 flex flex-col">
-            <div className="text-left font-sans flex-1">
-              <div className="flex items-center gap-2 mb-1"><Activity size={16} className="text-cyan-400" /><h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Price Chart</h3></div>
-              <p className="text-xs text-slate-500 font-medium mb-2">최근 약 3개월(60일) 일봉 추세와 이동평균선(MA20)입니다.</p>
-              <div className="mt-auto pt-2"><StockPriceChart dayCandles={displayDay} /></div>
-            </div>
-          </div>
-        )}
         {indicators.priceMomentum && (
           <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl border border-white/5 flex flex-col">
-            <div className="text-left font-sans flex-1">
+            <div className="text-left font-sans flex-1 flex flex-col">
               <div className="flex items-center gap-2 mb-1"><Zap size={16} className="text-yellow-400" /><h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Price Momentum</h3></div>
-              <div className="flex items-baseline gap-3 mb-4">
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 my-4">
                 <span className={`text-5xl font-black tracking-tighter tabular-nums ${momentum >= 0 ? 'text-white' : 'text-blue-400'}`}>
                   {momentum.toFixed(2)}%
                 </span>
@@ -364,14 +357,30 @@ export default function StockCustomViewTab({
             </div>
           </div>
         )}
-        {indicators.zscore && (
+        {indicators.momentum && (
+          <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl border border-white/5 flex flex-col">
+            <div className="text-left font-sans flex-1">
+              <div className="flex items-center gap-2 mb-1"><Activity size={16} className="text-cyan-400" /><h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Price Chart</h3></div>
+              <p className="text-xs text-slate-500 font-medium mb-2">최근 약 3개월(60일) 일봉 추세와 이동평균선(MA20)입니다.</p>
+              <div className="mt-auto pt-2"><StockPriceChart dayCandles={displayDay} /></div>
+            </div>
+          </div>
+        )}
+        {indicators.squeeze && (
+          <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl border border-white/5 flex flex-col">
+            <div className="text-left font-sans flex-1 flex flex-col">
+              <div className="flex items-center gap-2 mb-1"><Battery size={16} className="text-violet-400" /><h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Squeeze Energy</h3></div>
+              <p className="text-xs text-slate-500 font-medium mb-3">눌림목 에너지 축적 상태입니다.</p>
+              <div className="mt-auto"><SqueezeEnergyPanel stockCode={stockCode} dayCandles={displayDay} /></div>
+            </div>
+          </div>
+        )}
+        {indicators.intensity && (
           <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col">
             <div className="text-left font-sans flex-1 flex flex-col">
-              <div className="flex items-center gap-2 mb-1"><Gauge size={16} className="text-orange-500" /><h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Z-Score</h3></div>
-              <p className="text-xs text-slate-500 font-medium mb-3">20일 평균선(MA20) 대비 표준편차 괴리도.</p>
-              <div className="my-auto flex items-center justify-center gap-3">
-                <span className={`text-6xl font-black tracking-tighter tabular-nums ${getZScoreColor(zScoreValue)}`}>{zScoreValue > 0 ? '+' : ''}{zScoreValue}</span>
-              </div>
+              <div className="flex items-center gap-2 mb-1"><Zap size={16} className="text-amber-500" /><h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Trade Intensity</h3></div>
+              <p className="text-xs text-slate-500 font-medium mb-3">최근 12개의 5분봉 기준 매수/매도 압력 추정.</p>
+              <div className="mt-auto"><TradeIntensityGauge candles={minuteCandles} /></div>
             </div>
           </div>
         )}
@@ -402,15 +411,6 @@ export default function StockCustomViewTab({
             </div>
           </div>
         )}
-        {indicators.intensity && (
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col">
-            <div className="text-left font-sans flex-1 flex flex-col">
-              <div className="flex items-center gap-2 mb-1"><Zap size={16} className="text-amber-500" /><h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Trade Intensity</h3></div>
-              <p className="text-xs text-slate-500 font-medium mb-3">최근 12개의 5분봉 기준 매수/매도 압력 추정.</p>
-              <div className="mt-auto"><TradeIntensityGauge candles={minuteCandles} /></div>
-            </div>
-          </div>
-        )}
         {indicators.macd && macd && (
           <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col">
             <div className="text-left font-sans flex-1 flex flex-col">
@@ -423,6 +423,17 @@ export default function StockCustomViewTab({
                     <span className={`text-sm font-black tabular-nums ${v >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{v.toFixed(2)}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+        {indicators.zscore && (
+          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col">
+            <div className="text-left font-sans flex-1 flex flex-col">
+              <div className="flex items-center gap-2 mb-1"><Gauge size={16} className="text-orange-500" /><h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Z-Score</h3></div>
+              <p className="text-xs text-slate-500 font-medium mb-3">20일 평균선(MA20) 대비 표준편차 괴리도.</p>
+              <div className="my-auto flex items-center justify-center gap-3">
+                <span className={`text-6xl font-black tracking-tighter tabular-nums ${getZScoreColor(zScoreValue)}`}>{zScoreValue > 0 ? '+' : ''}{zScoreValue}</span>
               </div>
             </div>
           </div>

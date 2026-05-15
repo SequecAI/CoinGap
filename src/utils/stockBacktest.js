@@ -81,35 +81,7 @@ async function fetchIndexDayCandles(indexSymbol, count = 80) {
   });
 }
 
-// ── 일봉 RSI(14) ──
-function calcRSI(closes, period = 14) {
-  if (!closes || closes.length < period + 1) return null;
-  let gains = 0;
-  let losses = 0;
-  for (let i = closes.length - period; i < closes.length; i++) {
-    const change = closes[i] - closes[i - 1];
-    if (change > 0) gains += change;
-    else losses -= change;
-  }
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
-  if (avgLoss === 0) return 100;
-  return 100 - (100 / (1 + avgGain / avgLoss));
-}
-
-// ── 일봉 볼린저(20, 2σ) ──
-function calcBollinger(closes, currentPrice, period = 20, multiplier = 2) {
-  if (!closes || closes.length < period) return { upper: 0, lower: 0, pb: 0 };
-  const slice = closes.slice(-period);
-  const ma = slice.reduce((a, b) => a + b, 0) / period;
-  const variance = slice.reduce((a, b) => a + Math.pow(b - ma, 2), 0) / period;
-  const std = Math.sqrt(variance);
-  const upper = ma + std * multiplier;
-  const lower = ma - std * multiplier;
-  const range = upper - lower;
-  const pb = range > 0 ? ((currentPrice - lower) / range) * 100 : 0;
-  return { upper, lower, pb: isNaN(pb) ? 0 : pb };
-}
+import { calcRSI, calcBollinger, calcMACD, calcMFI, calcStochRSI, calcSqueezeEnergy } from './indicators';
 
 // ── 수식 평가 ──
 function evaluateFormula(formula, vars) {
@@ -208,10 +180,21 @@ export async function runStockBacktest({
     const kospiRate = ((kospiT.close - kospiPrev.close) / kospiPrev.close) * 100;
     const kosdaqRate = ((kosdaqT.close - kosdaqPrev.close) / kosdaqPrev.close) * 100;
 
-    // RSI/BB 컨텍스트: i 시점까지의 일봉 종가
-    const closesUpToT = stockDays.slice(Math.max(0, i - 30), i + 1).map(d => d.close);
-    const rsi = calcRSI(closesUpToT, 14);
-    const bb = calcBollinger(closesUpToT, T.close, 20, 2);
+    // RSI/BB 컨텍스트: i 시점까지의 일봉
+    const candlesUpToT = stockDays.slice(Math.max(0, i - 60), i + 1).map(d => ({
+      trade_price: d.close,
+      high_price: d.high,
+      low_price: d.low,
+      opening_price: d.open,
+      candle_acc_trade_volume: d.volume
+    }));
+    
+    const rsi = calcRSI(candlesUpToT, 14);
+    const bb = calcBollinger(candlesUpToT, 20, 2);
+    const macd = calcMACD(candlesUpToT, 12, 26, 9);
+    const mfi = calcMFI(candlesUpToT, 14);
+    const stochRsi = calcStochRSI(candlesUpToT, 14, 14);
+    const squeeze = calcSqueezeEnergy(candlesUpToT);
 
     const vars = {
       STOCK_PRICE: T.close,
@@ -228,9 +211,13 @@ export async function runStockBacktest({
       PREV_C: prev.close,
       PREV_V: prev.volume,
       RSI_14: rsi === null ? 50 : rsi,
-      BB_UPPER: bb.upper,
-      BB_LOWER: bb.lower,
-      BB_PB: bb.pb,
+      BB_UPPER: bb ? bb.upper : 0,
+      BB_LOWER: bb ? bb.lower : 0,
+      BB_PB: bb ? bb.percentB * 100 : 0,
+      MACD_HIST: macd ? macd.hist : 0,
+      MFI_14: mfi === null ? 50 : mfi,
+      STOCH_RSI: stochRsi === null ? 50 : stochRsi,
+      SQUEEZE_SCORE: squeeze ? squeeze.score : 0,
     };
 
     const { value, error } = evaluateFormula(formula, vars);

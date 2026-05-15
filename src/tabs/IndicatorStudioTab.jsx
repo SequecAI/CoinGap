@@ -7,36 +7,7 @@ import {
 import { useStudioIndicators } from '../hooks/useStudioIndicators';
 import { runBacktest, usesOrderbookVars } from '../utils/backtest';
 
-// ── 일봉 RSI(14) ──
-function calcRSI(candles, period = 14) {
-  if (!candles || candles.length < period + 1) return null;
-  const prices = candles.map(c => c.trade_price);
-  let gains = 0;
-  let losses = 0;
-  for (let i = prices.length - period; i < prices.length; i++) {
-    const change = prices[i] - prices[i - 1];
-    if (change > 0) gains += change;
-    else losses -= change;
-  }
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
-  if (avgLoss === 0) return 100;
-  const rs = avgGain / avgLoss;
-  return 100 - (100 / (1 + rs));
-}
-
-// ── 일봉 볼린저(20, 2σ) ──
-function calcBollinger(candles, period = 20, multiplier = 2) {
-  if (!candles || candles.length < period) return null;
-  const slice = candles.slice(-period);
-  const sum = slice.reduce((a, b) => a + b.trade_price, 0);
-  const ma = sum / period;
-  const variance = slice.reduce((a, b) => a + Math.pow(b.trade_price - ma, 2), 0) / period;
-  const std = Math.sqrt(variance);
-  const upper = ma + std * multiplier;
-  const lower = ma - std * multiplier;
-  return { upper, lower, ma };
-}
+import { calcRSI, calcBollinger, calcMACD, calcMFI, calcStochRSI, calcSqueezeEnergy } from '../utils/indicators';
 
 export default function IndicatorStudioTab({
   tickers, markets, selectedAlt, altName,
@@ -105,10 +76,33 @@ export default function IndicatorStudioTab({
   const bbData = useMemo(() => {
     const r = calcBollinger(dayCandles, 20, 2);
     if (!r) return { upper: 0, lower: 0, pb: 0 };
-    const range = r.upper - r.lower;
-    const pb = range > 0 ? ((altPrice - r.lower) / range) * 100 : 0;
-    return { upper: r.upper, lower: r.lower, pb: isNaN(pb) ? 0 : pb };
-  }, [dayCandles, altPrice]);
+    return { upper: r.upper, lower: r.lower, pb: r.percentB * 100 };
+  }, [dayCandles]);
+
+  const macdData = useMemo(() => calcMACD(dayCandles, 12, 26, 9), [dayCandles]);
+  const mfi14 = useMemo(() => {
+    const v = calcMFI(dayCandles, 14);
+    return v === null ? 50 : v;
+  }, [dayCandles]);
+  const stochRsi = useMemo(() => {
+    const v = calcStochRSI(dayCandles, 14, 14);
+    return v === null ? 50 : v;
+  }, [dayCandles]);
+  const squeezeScore = useMemo(() => {
+    const v = calcSqueezeEnergy(dayCandles);
+    return v ? v.score : 0;
+  }, [dayCandles]);
+
+  const tradeIntensity = useMemo(() => {
+    if (!candles5m || candles5m.length === 0) return 50;
+    const recent = candles5m.slice(-12);
+    let buyVol = 0, totalVol = 0;
+    recent.forEach(c => {
+      totalVol += c.candle_acc_trade_volume;
+      if (c.trade_price >= c.opening_price) buyVol += c.candle_acc_trade_volume;
+    });
+    return totalVol > 0 ? (buyVol / totalVol) * 100 : 50;
+  }, [candles5m]);
 
   // ── 변수 그룹 정의 ──
   const variableGroups = [
@@ -154,6 +148,11 @@ export default function IndicatorStudioTab({
         { label: '볼린저 상단', value: 'BB_UPPER', data: bbData.upper },
         { label: '볼린저 하단', value: 'BB_LOWER', data: bbData.lower },
         { label: '볼린저 %B', value: 'BB_PB', data: bbData.pb },
+        { label: '스퀴즈 에너지', value: 'SQUEEZE_SCORE', data: squeezeScore },
+        { label: '체결강도', value: 'TRADE_INTENSITY', data: tradeIntensity },
+        { label: 'MACD (Hist)', value: 'MACD_HIST', data: macdData ? macdData.hist : 0 },
+        { label: 'MFI (14일)', value: 'MFI_14', data: mfi14 },
+        { label: 'Stoch RSI', value: 'STOCH_RSI', data: stochRsi },
       ]
     },
     {
@@ -208,7 +207,7 @@ export default function IndicatorStudioTab({
   const currentResult = useMemo(
     () => evaluateFormula(formula),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [formula, btcPrice, btcRate, altPrice, altRate, safeMomentum, volRatio, zScore, prevCandle, rsi14, bbData, orderbook]
+    [formula, btcPrice, btcRate, altPrice, altRate, safeMomentum, volRatio, zScore, prevCandle, rsi14, bbData, orderbook, tradeIntensity, macdData, mfi14, stochRsi, squeezeScore]
   );
 
   const getSignal = (score, thres, errorType) => {

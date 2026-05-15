@@ -12,7 +12,8 @@ const DEFAULT_SETTINGS = {
     zscore: true,
     macd: true,
     mfi: true,
-    stochrsi: true
+    stochrsi: true,
+    squeeze: true
   }
 };
 

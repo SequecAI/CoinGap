@@ -488,6 +488,7 @@ export default function App() {
             dayCandles={stockData.dayCandles}
             momentum={stockData.momentum}
             stockName={stockData.selectedStock.name}
+            stockCode={stockData.selectedStock.code}
             currentPrice={stockData.currentPrice}
             changeRate={stockData.changeRate}
             changeDirection={stockData.changeDirection}
@@ -550,6 +551,7 @@ export default function App() {
             minuteCandles={stockData.minuteCandles}
             momentum={stockData.momentum}
             stockName={stockData.selectedStock.name}
+            stockCode={stockData.selectedStock.code}
             currentPrice={stockData.currentPrice}
             changeRate={stockData.changeRate}
             changeDirection={stockData.changeDirection}

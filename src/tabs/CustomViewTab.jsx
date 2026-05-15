@@ -1,126 +1,16 @@
 import React from 'react';
-import { Settings, Crosshair, BarChart2, Shield, Zap, Gauge, Activity, TrendingUp } from 'lucide-react';
+import { Settings, Crosshair, BarChart2, Shield, Zap, Gauge, Activity, TrendingUp, Battery } from 'lucide-react';
 import { useCustomSettings } from '../hooks/useCustomSettings';
 import CoinPricePanel from '../components/CoinPricePanel';
 import {
   TradeIntensityGauge,
   RSIGauge,
   BollingerBandPanel,
-  MomentumLineChart
+  MomentumLineChart,
+  CoinPriceChart,
+  CryptoSqueezeEnergyPanel
 } from './AnalysisTab';
-
-// ── RSI Calculation ──
-function calcRSI(candles, period = 14) {
-  if (!candles || candles.length < period + 1) return null;
-  let gains = 0, losses = 0;
-  for (let i = 1; i <= period; i++) {
-    const change = candles[i].trade_price - candles[i - 1].trade_price;
-    if (change > 0) gains += change;
-    else losses -= change;
-  }
-  let avgGain = gains / period;
-  let avgLoss = losses / period;
-  
-  for (let i = period + 1; i < candles.length; i++) {
-    const change = candles[i].trade_price - candles[i - 1].trade_price;
-    const gain = change > 0 ? change : 0;
-    const loss = change < 0 ? -change : 0;
-    avgGain = (avgGain * 13 + gain) / 14;
-    avgLoss = (avgLoss * 13 + loss) / 14;
-  }
-  
-  if (avgLoss === 0) return 100;
-  const rs = avgGain / avgLoss;
-  return 100 - (100 / (1 + rs));
-}
-
-// ── Bollinger Bands Calculation ──
-function calcBollinger(candles, period = 20, multiplier = 2) {
-  if (!candles || candles.length < period) return null;
-  const slice = candles.slice(-period);
-  const sum = slice.reduce((a, b) => a + b.trade_price, 0);
-  const ma = sum / period;
-  const variance = slice.reduce((a, b) => a + Math.pow(b.trade_price - ma, 2), 0) / period;
-  const std = Math.sqrt(variance);
-  
-  const upper = ma + std * multiplier;
-  const lower = ma - std * multiplier;
-  const current = slice[slice.length - 1].trade_price;
-  const percentB = (current - lower) / (upper - lower);
-  const bandwidth = ((upper - lower) / ma) * 100;
-  
-  return { upper, lower, ma, current, percentB, bandwidth, std };
-}
-
-// ── EMA Calculation ──
-function calcEMA(candles, period) {
-  if (!candles || candles.length < period) return [];
-  const k = 2 / (period + 1);
-  let emaArr = [];
-  let sum = 0;
-  for (let i = 0; i < period; i++) sum += candles[i].trade_price;
-  let ema = sum / period;
-  emaArr.push(ema);
-  for (let i = period; i < candles.length; i++) {
-    ema = (candles[i].trade_price - ema) * k + ema;
-    emaArr.push(ema);
-  }
-  return emaArr;
-}
-
-// ── MACD Calculation ──
-function calcMACD(candles, fast = 12, slow = 26, signal = 9) {
-  if (!candles || candles.length < slow + signal) return null;
-  const fastEMA = calcEMA(candles, fast);
-  const slowEMA = calcEMA(candles, slow);
-  const diff = fastEMA.length - slowEMA.length;
-  const macdLine = [];
-  for (let i = 0; i < slowEMA.length; i++) {
-    macdLine.push(fastEMA[i + diff] - slowEMA[i]);
-  }
-  let sum = 0;
-  for (let i = 0; i < signal; i++) sum += macdLine[i];
-  let sig = sum / signal;
-  const k = 2 / (signal + 1);
-  for (let i = signal; i < macdLine.length; i++) {
-    sig = (macdLine[i] - sig) * k + sig;
-  }
-  const currentMACD = macdLine[macdLine.length - 1];
-  const currentSignal = sig;
-  const currentHist = currentMACD - currentSignal;
-  return { macd: currentMACD, signal: currentSignal, hist: currentHist };
-}
-
-// ── MFI Calculation ──
-function calcMFI(candles, period = 14) {
-  if (!candles || candles.length <= period) return null;
-  let posFlow = 0, negFlow = 0;
-  const typicals = candles.map(c => (c.high_price + c.low_price + c.trade_price) / 3);
-  for (let i = candles.length - period; i < candles.length; i++) {
-    const rmf = typicals[i] * candles[i].candle_acc_trade_volume;
-    if (typicals[i] > typicals[i - 1]) posFlow += rmf;
-    else if (typicals[i] < typicals[i - 1]) negFlow += rmf;
-  }
-  if (negFlow === 0) return 100;
-  const mfi = 100 - (100 / (1 + posFlow / negFlow));
-  return mfi;
-}
-
-// ── StochRSI Calculation ──
-function calcStochRSI(candles, period = 14, stochPeriod = 14) {
-  if (!candles || candles.length < period + stochPeriod) return null;
-  const rsiArr = [];
-  for (let j = candles.length - stochPeriod; j <= candles.length; j++) {
-    const r = calcRSI(candles.slice(0, j), period);
-    if (r !== null) rsiArr.push(r);
-  }
-  if (rsiArr.length === 0) return null;
-  const currentRSI = rsiArr[rsiArr.length - 1];
-  const minRSI = Math.min(...rsiArr);
-  const maxRSI = Math.max(...rsiArr);
-  if (maxRSI === minRSI) return 50;
-  return ((currentRSI - minRSI) / (maxRSI - minRSI)) * 100;
-}
+import { calcRSI, calcBollinger, calcMACD, calcMFI, calcStochRSI } from '../utils/indicators';
 
 export default function CustomViewTab({
   candles5m,
@@ -273,13 +163,15 @@ export default function CustomViewTab({
         </div>
         <div className="flex flex-wrap gap-2">
           <ToggleButton active={indicators.bollinger} onClick={() => toggleIndicator('bollinger')} label="Bollinger Bands" />
-          <ToggleButton active={indicators.momentum} onClick={() => toggleIndicator('momentum')} label="Momentum Trail" />
+          <ToggleButton active={indicators.priceMomentum} onClick={() => toggleIndicator('priceMomentum')} label="Momentum Trail" />
+          <ToggleButton active={indicators.momentum} onClick={() => toggleIndicator('momentum')} label="Price Chart" />
+          <ToggleButton active={indicators.squeeze} onClick={() => toggleIndicator('squeeze')} label="Squeeze Energy" />
+          <ToggleButton active={indicators.intensity} onClick={() => toggleIndicator('intensity')} label="Trade Intensity" />
           <ToggleButton active={indicators.rsi} onClick={() => toggleIndicator('rsi')} label="RSI-14" />
           <ToggleButton active={indicators.stochrsi} onClick={() => toggleIndicator('stochrsi')} label="Stoch RSI" />
           <ToggleButton active={indicators.mfi} onClick={() => toggleIndicator('mfi')} label="MFI-14" />
-          <ToggleButton active={indicators.intensity} onClick={() => toggleIndicator('intensity')} label="Trade Intensity" />
-          <ToggleButton active={indicators.zscore} onClick={() => toggleIndicator('zscore')} label="Gap Z-Score" />
           <ToggleButton active={indicators.macd} onClick={() => toggleIndicator('macd')} label="MACD (12,26,9)" />
+          <ToggleButton active={indicators.zscore} onClick={() => toggleIndicator('zscore')} label="Gap Z-Score" />
         </div>
       </div>
 
@@ -304,7 +196,7 @@ export default function CustomViewTab({
           </div>
         )}
 
-        {indicators.momentum && (
+        {indicators.priceMomentum && (
           <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
             <div className="relative z-10 text-left font-sans flex-1">
               <div className="flex items-center gap-2 mb-1">
@@ -319,6 +211,59 @@ export default function CustomViewTab({
               </div>
             </div>
             <div className="absolute -top-12 -right-12 w-48 h-48 bg-cyan-400/5 rounded-full blur-[60px]"></div>
+          </div>
+        )}
+
+        {indicators.momentum && (
+          <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
+            <div className="relative z-10 text-left font-sans flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <TrendingUp size={16} className="text-cyan-400" />
+                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Price Chart</h3>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mb-2">
+                최근 약 2개월(60일) 일봉 추세와 이동평균선(MA20)입니다.
+              </p>
+              <div className="mt-auto pt-2 w-full">
+                <CoinPriceChart dayCandles={dayCandles} />
+              </div>
+            </div>
+            <div className="absolute -top-12 -right-12 w-48 h-48 bg-cyan-400/5 rounded-full blur-[60px]"></div>
+          </div>
+        )}
+
+        {indicators.squeeze && (
+          <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col">
+            <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                <Battery size={16} className="text-violet-400" />
+                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Squeeze Energy</h3>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mb-3">
+                눌림목 에너지 축적 상태입니다.
+              </p>
+              <div className="mt-auto">
+                <CryptoSqueezeEnergyPanel market={alt?.market} dayCandles={dayCandles} />
+              </div>
+            </div>
+            <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-violet-600/10 rounded-full blur-[60px]"></div>
+          </div>
+        )}
+
+        {indicators.intensity && (
+          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
+            <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                <Zap size={16} className="text-amber-500" />
+                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Trade Intensity</h3>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mb-3">
+                최근 12개 5분봉 매수/매도 압력.
+              </p>
+              <div className="mt-auto">
+                <TradeIntensityGauge candles={displayCandles5m} />
+              </div>
+            </div>
           </div>
         )}
 
@@ -350,7 +295,7 @@ export default function CustomViewTab({
                 RSI의 민감도를 극대화하여 단기 과매수/과매도를 추적합니다.
               </p>
               <div className="mt-auto">
-                <RSIGauge rsi={stochRsi} /> {/* StochRSI도 0-100 */}
+                <RSIGauge rsi={stochRsi} />
               </div>
             </div>
           </div>
@@ -367,43 +312,7 @@ export default function CustomViewTab({
                 거래량이 실린 돈의 흐름(자금 유입)을 보여주는 지표입니다.
               </p>
               <div className="mt-auto">
-                <RSIGauge rsi={mfi} /> {/* MFI도 0-100이므로 RSIGauge 재사용 */}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {indicators.intensity && (
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
-            <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
-              <div className="flex items-center gap-2 mb-1">
-                <Zap size={16} className="text-amber-500" />
-                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Trade Intensity</h3>
-              </div>
-              <p className="text-xs text-slate-500 font-medium mb-3">
-                최근 12개 5분봉 매수/매도 압력.
-              </p>
-              <div className="mt-auto">
-                <TradeIntensityGauge candles={displayCandles5m} />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {indicators.zscore && (
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
-            <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
-              <div className="flex items-center gap-2 mb-1">
-                <Gauge size={16} className="text-orange-500" />
-                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Gap Z-Score</h3>
-              </div>
-              <p className="text-xs text-slate-500 font-medium mb-3">
-                비트코인 대비 상대적 가격 괴리 지수.
-              </p>
-              <div className="my-auto flex items-center justify-center gap-3">
-                <span className={`text-6xl font-black tracking-tighter tabular-nums ${getZScoreColor(zScoreValue)}`}>
-                  {zScoreValue > 0 ? '+' : ''}{zScoreValue}
-                </span>
+                <RSIGauge rsi={mfi} />
               </div>
             </div>
           </div>
@@ -432,6 +341,25 @@ export default function CustomViewTab({
                   <span className="text-xs text-slate-400 font-bold">Histogram</span>
                   <span className={`text-sm font-black tabular-nums ${macd.hist >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{macd.hist.toFixed(2)}</span>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {indicators.zscore && (
+          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col">
+            <div className="relative z-10 text-left font-sans flex-1 flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                <Gauge size={16} className="text-orange-500" />
+                <h3 className="text-slate-400 font-bold text-sm uppercase tracking-widest">Gap Z-Score</h3>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mb-3">
+                비트코인 대비 상대적 가격 괴리 지수.
+              </p>
+              <div className="my-auto flex items-center justify-center gap-3">
+                <span className={`text-6xl font-black tracking-tighter tabular-nums ${getZScoreColor(zScoreValue)}`}>
+                  {zScoreValue > 0 ? '+' : ''}{zScoreValue}
+                </span>
               </div>
             </div>
           </div>

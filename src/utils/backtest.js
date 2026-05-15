@@ -1,4 +1,5 @@
 import { safeFetch } from '../hooks/useUpbitData';
+import { calcRSI, calcBollinger, calcMACD, calcMFI, calcStochRSI, calcSqueezeEnergy } from './indicators';
 
 const ORDERBOOK_VARS = ['TOTAL_BID', 'TOTAL_ASK', 'BID_ASK_RATIO'];
 
@@ -30,36 +31,6 @@ async function fetchAll5mCandles(market, totalBars, tickProgress) {
     await sleep(REQUEST_GAP_MS);
   }
   return all.reverse();
-}
-
-// ── 일봉 RSI(14) — 마지막 봉 기준 ──
-function calcRSI(closes, period = 14) {
-  if (!closes || closes.length < period + 1) return null;
-  let gains = 0;
-  let losses = 0;
-  for (let i = closes.length - period; i < closes.length; i++) {
-    const change = closes[i] - closes[i - 1];
-    if (change > 0) gains += change;
-    else losses -= change;
-  }
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
-  if (avgLoss === 0) return 100;
-  return 100 - (100 / (1 + avgGain / avgLoss));
-}
-
-// ── 일봉 볼린저(20, 2σ) ──
-function calcBollinger(closes, currentPrice, period = 20, multiplier = 2) {
-  if (!closes || closes.length < period) return { upper: 0, lower: 0, pb: 0 };
-  const slice = closes.slice(-period);
-  const ma = slice.reduce((a, b) => a + b, 0) / period;
-  const variance = slice.reduce((a, b) => a + Math.pow(b - ma, 2), 0) / period;
-  const std = Math.sqrt(variance);
-  const upper = ma + std * multiplier;
-  const lower = ma - std * multiplier;
-  const range = upper - lower;
-  const pb = range > 0 ? ((currentPrice - lower) / range) * 100 : 0;
-  return { upper, lower, pb: isNaN(pb) ? 0 : pb };
 }
 
 // ── 수식 평가 ──
@@ -124,14 +95,12 @@ export async function runBacktest({
   const btcByTime = new Map();
   btcCandles.forEach(c => btcByTime.set(c.candle_date_time_utc, c));
 
-  // 일봉 종가 캐시 (date string → 그 날짜 이전의 종가 배열)
-  const stableDailyClosesCache = new Map();
-  const stableDailyClosesBefore = (dateStr) => {
-    if (stableDailyClosesCache.has(dateStr)) return stableDailyClosesCache.get(dateStr);
-    const arr = altDayCandles
-      .filter(d => d.candle_date_time_kst.split('T')[0] < dateStr)
-      .map(d => d.trade_price);
-    stableDailyClosesCache.set(dateStr, arr);
+  // 일봉 캐시 (date string → 그 날짜 이전의 일봉 객체 배열)
+  const stableDailyCandlesCache = new Map();
+  const stableDailyCandlesBefore = (dateStr) => {
+    if (stableDailyCandlesCache.has(dateStr)) return stableDailyCandlesCache.get(dateStr);
+    const arr = altDayCandles.filter(d => d.candle_date_time_kst.split('T')[0] < dateStr);
+    stableDailyCandlesCache.set(dateStr, arr);
     return arr;
   };
 
@@ -169,10 +138,24 @@ export async function runBacktest({
     const prevBar = altCandles[i - 1] || {};
 
     const dateStr = altT.candle_date_time_kst.split('T')[0];
-    const stableCloses = stableDailyClosesBefore(dateStr);
-    const dailyClosesAtT = [...stableCloses, altT.trade_price];
-    const rsi = calcRSI(dailyClosesAtT, 14);
-    const bb = calcBollinger(dailyClosesAtT, altT.trade_price, 20, 2);
+    const stableCandles = stableDailyCandlesBefore(dateStr);
+    const dailyCandlesAtT = [...stableCandles, altT];
+    
+    const rsi = calcRSI(dailyCandlesAtT, 14);
+    const bb = calcBollinger(dailyCandlesAtT, 20, 2);
+    const macd = calcMACD(dailyCandlesAtT, 12, 26, 9);
+    const mfi = calcMFI(dailyCandlesAtT, 14);
+    const stochRsi = calcStochRSI(dailyCandlesAtT, 14, 14);
+    const squeeze = calcSqueezeEnergy(dailyCandlesAtT);
+
+    // 체결강도 (최근 12개 5분봉)
+    const recent5m = altCandles.slice(Math.max(0, i - 11), i + 1);
+    let buyVol = 0, totalVol = 0;
+    recent5m.forEach(c => {
+      totalVol += c.candle_acc_trade_volume;
+      if (c.trade_price >= c.opening_price) buyVol += c.candle_acc_trade_volume;
+    });
+    const tradeIntensity = totalVol > 0 ? (buyVol / totalVol) * 100 : 50;
 
     const vars = {
       BTC_PRICE: btcT.trade_price,
@@ -188,9 +171,14 @@ export async function runBacktest({
       PREV_C: prevBar.trade_price || 0,
       PREV_V: prevBar.candle_acc_trade_volume || 0,
       RSI_14: rsi === null ? 50 : rsi,
-      BB_UPPER: bb.upper,
-      BB_LOWER: bb.lower,
-      BB_PB: bb.pb,
+      BB_UPPER: bb ? bb.upper : 0,
+      BB_LOWER: bb ? bb.lower : 0,
+      BB_PB: bb ? bb.percentB * 100 : 0,
+      MACD_HIST: macd ? macd.hist : 0,
+      MFI_14: mfi === null ? 50 : mfi,
+      STOCH_RSI: stochRsi === null ? 50 : stochRsi,
+      SQUEEZE_SCORE: squeeze ? squeeze.score : 0,
+      TRADE_INTENSITY: tradeIntensity
     };
 
     const { value, error } = evaluateFormula(formula, vars);

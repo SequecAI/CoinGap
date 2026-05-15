@@ -226,23 +226,37 @@ export default function MarketBrief({ appMode, userInfo }) {
                 
                 {/* 페이지네이션 */}
                 {posts.length - 1 > postsPerPage && (
-                  <div className="flex justify-center items-center gap-4 mt-4 pt-2">
+                  <div className="flex justify-center items-center gap-1 mt-4 pt-2">
                     <button
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
-                      className="text-xs font-bold text-slate-500 disabled:opacity-30 hover:text-slate-700"
+                      className="p-1 text-slate-400 disabled:opacity-20 hover:text-slate-700 transition-colors"
                     >
-                      ← 이전
+                      <ChevronDown size={16} className="rotate-90" />
                     </button>
-                    <span className="text-xs font-bold text-slate-400">
-                      {currentPage} / {Math.ceil((posts.length - 1) / postsPerPage)}
-                    </span>
+                    
+                    <div className="flex items-center gap-1 mx-1">
+                      {Array.from({ length: Math.ceil((posts.length - 1) / postsPerPage) }, (_, i) => i + 1).map(pageNum => (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`w-6 h-6 rounded-lg text-[10px] font-black transition-all flex items-center justify-center ${
+                            currentPage === pageNum 
+                              ? (isStock ? 'bg-emerald-500 text-white shadow-sm' : 'bg-blue-500 text-white shadow-sm')
+                              : 'bg-white border border-slate-200 text-slate-400 hover:border-slate-400 hover:text-slate-600'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
+                    </div>
+
                     <button
                       onClick={() => setCurrentPage(p => Math.min(Math.ceil((posts.length - 1) / postsPerPage), p + 1))}
                       disabled={currentPage === Math.ceil((posts.length - 1) / postsPerPage)}
-                      className="text-xs font-bold text-slate-500 disabled:opacity-30 hover:text-slate-700"
+                      className="p-1 text-slate-400 disabled:opacity-20 hover:text-slate-700 transition-colors"
                     >
-                      다음 →
+                      <ChevronDown size={16} className="-rotate-90" />
                     </button>
                   </div>
                 )}

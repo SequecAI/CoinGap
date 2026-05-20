@@ -12,15 +12,22 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Push to Personal Repo (SequecAI/CoinGap)
+        env:
+          PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
         run: |
-          # 💡 인증 토큰과 함께 목적지인 개인 레포 주소를 지정
-          TARGET_URL="https://x-access-token:${{ secrets.PERSONAL_TOKEN }}@github.com/SequecAI/CoinGap.git"
-          
+          echo "PERSONAL_TOKEN length: ${#PERSONAL_TOKEN}"
+          if [ -z "$PERSONAL_TOKEN" ]; then
+            echo "::error::PERSONAL_TOKEN secret is empty or not set on this repository"
+            exit 1
+          fi
+
+          TARGET_URL="https://x-access-token:${PERSONAL_TOKEN}@github.com/SequecAI/CoinGap.git"
+
           git config --global user.name "GitHub Action Bot"
           git config --global user.email "action@github.com"
-          
-          # 목적지 주소를 target이라는 이름으로 등록 후 강제 푸시
+
           git remote add target "$TARGET_URL"
           git push --force --prune target main

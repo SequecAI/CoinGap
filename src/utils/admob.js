@@ -37,7 +37,7 @@ export async function showBanner(adUnitId = TEST_BANNER_ID) {
   try {
     const options = {
       adId: adUnitId,
-      adSize: BannerAdSize.BANNER,
+      adSize: BannerAdSize.ADAPTIVE_BANNER,
       position: BannerAdPosition.BOTTOM_CENTER,
       margin: 0,
       isTesting: true, // Force test ads. Set to false when using real ad IDs in production

@@ -455,7 +455,11 @@ export default function App() {
                       onSuccess={(res) => {
                         const params = new URLSearchParams(window.location.search);
                         if (params.get('mode') === 'app-login') {
-                          window.location.href = `coingap://login?credential=${res.credential}`;
+                          if (/android/i.test(navigator.userAgent)) {
+                            window.location.href = `intent://login?credential=${res.credential}#Intent;scheme=coingap;package=com.coingap.app;end;`;
+                          } else {
+                            window.location.href = `coingap://login?credential=${res.credential}`;
+                          }
                           return;
                         }
                         handleLoginSuccess(res);

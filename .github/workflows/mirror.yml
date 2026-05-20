@@ -1,0 +1,26 @@
+name: Mirror to Personal Repo for Free Vercel Deploy
+
+on:
+  push:
+    branches: [ "main" ] # 팀 레포의 main 브랜치에 push나 merge가 일어나면 발동!
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Team Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to Personal Repo (SequecAI/CoinGap)
+        run: |
+          # 💡 인증 토큰과 함께 목적지인 개인 레포 주소를 지정
+          TARGET_URL="https://x-access-token:${{ secrets.PERSONAL_TOKEN }}@github.com/SequecAI/CoinGap.git"
+          
+          git config --global user.name "GitHub Action Bot"
+          git config --global user.email "action@github.com"
+          
+          # 목적지 주소를 target이라는 이름으로 등록 후 강제 푸시
+          git remote add target "$TARGET_URL"
+          git push --force --prune target main

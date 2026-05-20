@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate, Routes, Route, Navigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
+import { App as CapApp } from '@capacitor/app';
 import {
   Activity,
   Bell,
@@ -29,6 +32,9 @@ import IndicatorStudioTab from './tabs/IndicatorStudioTab';
 import StockEditorTab from './tabs/StockEditorTab';
 import CommunityTab from './tabs/CommunityTab';
 import MarketBrief from './components/MarketBrief';
+import { initAdMob, showBanner } from './utils/admob';
+
+const WEB_APP_URL = 'https://coin-gap.vercel.app';
 
 function NicknameEditor({ userInfo, onSave }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -109,6 +115,46 @@ export default function App() {
   const stockData = useStockData();
   const { isLoggedIn, userInfo, handleLoginSuccess, logout, updateNickname } = useAuth();
   
+  // Initialize AdMob and Deep Link listeners on native app startup
+  useEffect(() => {
+    const startAdMob = async () => {
+      await initAdMob();
+      await showBanner();
+    };
+    startAdMob();
+
+    if (Capacitor.isNativePlatform()) {
+      const setupAppUrlListener = async () => {
+        CapApp.addListener('appUrlOpen', async (data) => {
+          console.log('[App] Deep link received URL:', data.url);
+          try {
+            const parsedUrl = new URL(data.url);
+            if (parsedUrl.host === 'login' || parsedUrl.pathname.includes('login')) {
+              const credential = parsedUrl.searchParams.get('credential');
+              if (credential) {
+                // Log in with the received credential ID token
+                await handleLoginSuccess({ credential });
+                // Close the browser window opened for login
+                await Browser.close();
+              }
+            }
+          } catch (err) {
+            console.error('[App] Deep link parse error:', err);
+          }
+        });
+      };
+      setupAppUrlListener();
+    }
+  }, [handleLoginSuccess]);
+
+  const handleGoogleAppLogin = async () => {
+    try {
+      await Browser.open({ url: `${WEB_APP_URL}/?mode=app-login` });
+    } catch (err) {
+      console.error('[App] Failed to open system browser:', err);
+    }
+  };
+
   const isInAppBrowser = /kakaotalk|instagram|fban|fbav|line|naver|daum/i.test(navigator.userAgent);
 
   const [dropThreshold, setDropThreshold] = useState(2.0);
@@ -358,7 +404,7 @@ export default function App() {
             <div className="flex flex-col items-center sm:items-end justify-center sm:justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0">
               {/* 로그인 버튼 */}
               <div className="flex justify-center sm:justify-end w-full sm:w-auto shrink-0 min-w-[200px]">
-                {isLoggedIn ? (
+                {isLoggedIn && new URLSearchParams(window.location.search).get('mode') !== 'app-login' ? (
                   <div className="flex items-center gap-2">
                     {userInfo.profileImage ? (
                       <img src={userInfo.profileImage} alt="" className="w-8 h-8 rounded-full border-2 border-slate-200" referrerPolicy="no-referrer" />
@@ -382,10 +428,38 @@ export default function App() {
                       <span className="text-[14px]">⚠️</span> 인앱 브라우저 제한 (클릭)
                     </button>
                   </div>
-                ) : (
+                ) : Capacitor.isNativePlatform() ? (
                   <div className="w-full flex justify-center sm:justify-end">
+                    {/* Google Login button via System Browser Redirect */}
+                    <button 
+                      onClick={handleGoogleAppLogin}
+                      className="w-full max-w-[280px] px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-black border border-slate-200 shadow-sm transition-all flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                        <path fill="#EA4335" d="M12 5.04c1.62 0 3.08.56 4.22 1.64l3.15-3.15C17.45 1.68 14.9 1 12 1 7.24 1 3.2 3.74 1.25 7.72l3.8 2.95C5.97 7.7 8.76 5.04 12 5.04z" />
+                        <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.45h6.45c-.28 1.48-1.12 2.73-2.37 3.58l3.68 2.85c2.16-1.99 3.41-4.91 3.41-8.54z" />
+                        <path fill="#FBBC05" d="M5.05 14.73c-.23-.69-.36-1.43-.36-2.2s.13-1.51.36-2.2L1.25 7.38C.45 8.99 0 10.79 0 12.7s.45 3.71 1.25 5.32l3.8-3.29z" />
+                        <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.68-2.85c-1.12.75-2.54 1.2-4.28 1.2-3.24 0-6.03-2.66-7.01-5.63l-3.8 2.95C3.2 20.26 7.24 23 12 23z" />
+                      </svg>
+                      Google 계정으로 로그인
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-full flex flex-col items-center sm:items-end gap-2">
+                    {new URLSearchParams(window.location.search).get('mode') === 'app-login' && (
+                      <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-1 rounded-lg animate-pulse text-center">
+                        📲 앱 로그인을 완료하려면 아래 구글 버튼을 클릭해주세요.
+                      </span>
+                    )}
                     <GoogleLogin
-                      onSuccess={handleLoginSuccess}
+                      onSuccess={(res) => {
+                        const params = new URLSearchParams(window.location.search);
+                        if (params.get('mode') === 'app-login') {
+                          window.location.href = `coingap://login?credential=${res.credential}`;
+                          return;
+                        }
+                        handleLoginSuccess(res);
+                      }}
                       onError={() => console.warn('Google 로그인 실패')}
                       size="medium"
                       shape="pill"

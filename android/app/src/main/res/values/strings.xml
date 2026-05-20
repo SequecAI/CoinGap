@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CoinGap</string>
+    <string name="title_activity_main">CoinGap</string>
+    <string name="package_name">com.coingap.app</string>
+    <string name="custom_url_scheme">com.coingap.app</string>
+</resources>

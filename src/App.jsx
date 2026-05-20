@@ -112,7 +112,23 @@ export default function App() {
   } = useUpbitData();
 
   const stockData = useStockData();
-  const { isLoggedIn, userInfo, handleLoginSuccess, logout, updateNickname } = useAuth();
+  const { isLoggedIn, userInfo, handleLoginSuccess, logout, updateNickname, deleteAccount } = useAuth();
+
+  const handleDeleteAccount = async () => {
+    const ok = window.confirm(
+      '정말 탈퇴하시겠습니까?\n\n' +
+      '• 계정 정보가 영구 삭제됩니다.\n' +
+      '• 작성하신 게시글·댓글의 작성자 정보는 익명 처리됩니다.\n' +
+      '• 이 작업은 되돌릴 수 없습니다.'
+    );
+    if (!ok) return;
+    const success = await deleteAccount();
+    if (success) {
+      alert('탈퇴 처리가 완료되었습니다.');
+    } else {
+      alert('탈퇴 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+    }
+  };
 
   // Initialize AdMob and native Google Sign-In on startup
   useEffect(() => {
@@ -411,6 +427,9 @@ export default function App() {
                     <NicknameEditor userInfo={userInfo} onSave={updateNickname} />
                     <button onClick={logout} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-all" title="로그아웃">
                       <LogOut size={16} />
+                    </button>
+                    <button onClick={handleDeleteAccount} className="px-1.5 py-1 rounded-md text-[10px] font-bold text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all" title="회원 탈퇴">
+                      탈퇴
                     </button>
                   </div>
                 ) : isInAppBrowser ? (

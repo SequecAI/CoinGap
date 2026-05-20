@@ -76,6 +76,23 @@ export function useAuth() {
     setUserInfo(null);
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    if (!userInfo) return false;
+    try {
+      const res = await fetch(`${API_BASE}/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'delete', userId: userInfo.userId }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setUserInfo(null);
+      return true;
+    } catch (err) {
+      console.error('[useAuth] 계정 삭제 실패:', err);
+      return false;
+    }
+  }, [userInfo]);
+
   const updateNickname = useCallback((newNickname) => {
     if (!userInfo) return;
     let finalNickname = newNickname.trim();
@@ -95,5 +112,5 @@ export function useAuth() {
     }).catch(err => console.warn('[useAuth] 닉네임 업데이트 실패:', err));
   }, [userInfo]);
 
-  return { isLoggedIn, userInfo, handleLoginSuccess, logout, updateNickname };
+  return { isLoggedIn, userInfo, handleLoginSuccess, logout, updateNickname, deleteAccount };
 }

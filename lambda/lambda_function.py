@@ -2,9 +2,10 @@
 통합 자산 지표 모니터 — 커뮤니티 백엔드 (AWS Lambda + DynamoDB)
 
 API Gateway 라우팅:
-  POST /users       → 유저 정보 upsert (최초 로그인 시 생성/업데이트)
-  POST /posts       → 자유게시판 글 또는 지표 데이터 저장
-  GET  /posts       → ?type=free|indicator 리스트 조회
+  POST /users                       → 유저 정보 upsert (최초 로그인 시 생성/업데이트)
+  POST /users  (action="delete")    → 회원 탈퇴: 게시글·댓글 익명화 + Users row 삭제
+  POST /posts                       → 자유게시판 글 또는 지표 데이터 저장
+  GET  /posts                       → ?type=free|indicator 리스트 조회
 """
 
 import json
@@ -86,6 +87,49 @@ def handle_upsert_user(body):
     users_table.put_item(Item={**(existing or {}), **item})
 
     return _response(200, {"message": "OK", "userId": user_id, "nickname": nickname, "profileImage": item.get("profileImage", "")})
+
+
+# ── POST /users (action="delete") ──
+def handle_delete_user(body):
+    """회원 탈퇴: 게시글·댓글의 작성자 정보를 익명화하고 Users row를 삭제."""
+    user_id = body.get("userId")
+    if not user_id:
+        return _response(400, {"error": "userId is required"})
+
+    try:
+        # 1) 커뮤니티 테이블에서 해당 사용자의 모든 항목을 익명화
+        anonymized = 0
+        scan_kwargs = {
+            "FilterExpression": boto3.dynamodb.conditions.Attr("userId").eq(user_id),
+            "ProjectionExpression": "PK, SK",
+        }
+        start_key = None
+        while True:
+            if start_key:
+                scan_kwargs["ExclusiveStartKey"] = start_key
+            res = community_table.scan(**scan_kwargs)
+            for it in res.get("Items", []):
+                community_table.update_item(
+                    Key={"PK": it["PK"], "SK": it["SK"]},
+                    UpdateExpression="SET nickname = :n, userId = :u, profileImage = :p",
+                    ExpressionAttributeValues={
+                        ":n": "(탈퇴한 사용자)",
+                        ":u": "deleted",
+                        ":p": "",
+                    },
+                )
+                anonymized += 1
+            start_key = res.get("LastEvaluatedKey")
+            if not start_key:
+                break
+
+        # 2) Users 테이블에서 회원 row 삭제
+        users_table.delete_item(Key={"userId": user_id})
+
+        return _response(200, {"message": "Deleted", "anonymizedCount": anonymized})
+    except Exception as e:
+        print(f"[ERROR] delete_user: {e}")
+        return _response(500, {"error": str(e)})
 
 
 # ── POST /posts (Tunneling) ──
@@ -373,6 +417,8 @@ def lambda_handler(event, context):
     try:
         if method == "POST" and route.endswith("/users"):
             body = json.loads(event.get("body") or "{}", parse_float=decimal.Decimal)
+            if body.get("action") == "delete":
+                return handle_delete_user(body)
             return handle_upsert_user(body)
 
         if method == "POST" and route.endswith("/posts"):

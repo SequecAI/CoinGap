@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="index, follow" />
+  <title>개인정보처리방침 — Asset Indicator Monitor</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      color: #1e293b;
+      background: #f8fafc;
+      line-height: 1.7;
+      -webkit-text-size-adjust: 100%;
+    }
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 48px 24px 96px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      margin: 0 0 8px;
+    }
+    .lead {
+      color: #64748b;
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    .lang-switch {
+      display: inline-flex;
+      gap: 4px;
+      background: #e2e8f0;
+      padding: 4px;
+      border-radius: 999px;
+      margin-bottom: 32px;
+    }
+    .lang-switch a {
+      text-decoration: none;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 999px;
+    }
+    .lang-switch a.active {
+      background: #fff;
+      color: #0f172a;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    }
+    section { margin-top: 28px; }
+    h2 {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 0 0 10px;
+      color: #0f172a;
+      border-left: 3px solid #6366f1;
+      padding-left: 10px;
+    }
+    p, li { font-size: 14px; }
+    ul { padding-left: 20px; margin: 8px 0; }
+    li { margin-bottom: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin: 10px 0;
+    }
+    th, td {
+      border: 1px solid #e2e8f0;
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #f1f5f9; font-weight: 700; }
+    code {
+      background: #e2e8f0;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    a { color: #4f46e5; }
+    hr {
+      border: 0;
+      border-top: 1px solid #e2e8f0;
+      margin: 56px 0 32px;
+    }
+    footer {
+      margin-top: 48px;
+      padding-top: 16px;
+      border-top: 1px solid #e2e8f0;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    [lang="en"] { display: none; }
+    body.lang-en [lang="ko"] { display: none; }
+    body.lang-en [lang="en"] { display: block; }
+  </style>
+</head>
+<body>
+<main>
+
+  <div class="lang-switch" role="tablist">
+    <a href="#ko" id="tab-ko" class="active" onclick="document.body.classList.remove('lang-en');document.getElementById('tab-ko').classList.add('active');document.getElementById('tab-en').classList.remove('active');return false;">한국어</a>
+    <a href="#en" id="tab-en" onclick="document.body.classList.add('lang-en');document.getElementById('tab-en').classList.add('active');document.getElementById('tab-ko').classList.remove('active');return false;">English</a>
+  </div>
+
+  <!-- ────────────────  한국어  ──────────────── -->
+  <div lang="ko">
+    <h1>개인정보처리방침</h1>
+    <p class="lead">
+      Asset Indicator Monitor(이하 "본 서비스")는 이용자의 개인정보를 중요하게 다루며, 「개인정보 보호법」 및 관련 법령을 준수합니다.<br />
+      시행일: <strong>[YYYY-MM-DD]</strong>
+    </p>
+
+    <section>
+      <h2>1. 수집하는 개인정보 항목 및 수집 방법</h2>
+      <table>
+        <thead><tr><th>구분</th><th>항목</th><th>수집 방법</th></tr></thead>
+        <tbody>
+          <tr><td>로그인 정보</td><td>Google 계정 고유 ID(sub), 이메일, 이름, 프로필 이미지 URL</td><td>Google OAuth 로그인 시</td></tr>
+          <tr><td>이용자 입력</td><td>닉네임, 게시글 본문, 사용자 정의 지표 수식</td><td>이용자가 직접 입력</td></tr>
+          <tr><td>광고 식별자</td><td>Google 광고 ID(AAID)</td><td>Google AdMob SDK</td></tr>
+          <tr><td>자동 수집</td><td>접속 일시, 기기 OS, 앱 버전, 오류 로그</td><td>서비스 이용 과정에서 자동 생성</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>2. 개인정보의 이용 목적</h2>
+      <ul>
+        <li>회원 식별 및 로그인 유지</li>
+        <li>커뮤니티 게시글 작성·표시 및 사용자별 지표 보관</li>
+        <li>광고 노출 및 광고 성과 측정(Google AdMob)</li>
+        <li>서비스 안정성 확보, 오류 모니터링, 부정 이용 방지</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>3. 개인정보의 제3자 제공 및 처리위탁</h2>
+      <p>본 서비스는 아래와 같이 일부 처리를 외부에 위탁하며, 이용자의 별도 동의 없이 다른 제3자에게 개인정보를 제공하지 않습니다.</p>
+      <table>
+        <thead><tr><th>수탁자</th><th>위탁 목적</th><th>제공 항목</th></tr></thead>
+        <tbody>
+          <tr><td>Google LLC (OAuth)</td><td>본인 인증</td><td>OAuth 인증 토큰</td></tr>
+          <tr><td>Google LLC (AdMob)</td><td>모바일 광고 노출/측정</td><td>광고 ID, 기기 정보</td></tr>
+          <tr><td>Google LLC (AdSense, 웹 한정)</td><td>웹 광고 노출/측정</td><td>쿠키 기반 식별자</td></tr>
+          <tr><td>Amazon Web Services (AWS, ap-northeast-2)</td><td>회원·게시글 데이터 저장(Lambda, DynamoDB)</td><td>로그인 정보, 게시글, 지표 데이터</td></tr>
+          <tr><td>Vercel Inc. (웹 한정)</td><td>웹 호스팅, 접속 분석</td><td>웹 접속 로그</td></tr>
+        </tbody>
+      </table>
+      <p>업비트 및 네이버 증권 시세 API는 시세 조회 목적으로만 호출되며, 이용자 식별 정보를 전송하지 않습니다.</p>
+    </section>
+
+    <section>
+      <h2>4. 개인정보의 처리 및 보유 기간</h2>
+      <ul>
+        <li>회원 정보: <strong>회원 탈퇴 시까지</strong></li>
+        <li>커뮤니티 게시글 및 사용자 지표: <strong>회원 탈퇴 또는 이용자 삭제 요청 시까지</strong></li>
+        <li>접속 로그·오류 로그: 최대 6개월</li>
+      </ul>
+      <p>다만 관련 법령에 따라 보존이 필요한 경우 해당 기간 동안 보관합니다.</p>
+    </section>
+
+    <section>
+      <h2>5. 개인정보의 파기 절차 및 방법</h2>
+      <p>보유 기간이 경과하거나 처리 목적이 달성된 개인정보는 지체 없이 파기합니다. 전자적 파일 형태의 정보는 복구 불가능한 방법으로 영구 삭제하며, 종이 문서는 분쇄·소각합니다.</p>
+    </section>
+
+    <section>
+      <h2>6. 정보주체의 권리 및 행사 방법</h2>
+      <ul>
+        <li>개인정보 열람·정정·삭제·처리 정지 요청</li>
+        <li>본인 인증을 거친 후, 아래 연락처를 통해 요청 가능</li>
+        <li>앱 내에서 닉네임 수정 및 회원 탈퇴 기능을 제공합니다</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>7. 광고 ID 사용</h2>
+      <p>본 서비스는 Google AdMob을 통해 광고를 노출하며, 광고 개인화 및 사기 방지를 위해 Google 광고 ID(AAID)를 사용합니다. 이용자는 Android 기기의 <strong>설정 → Google → 광고</strong> 메뉴에서 광고 ID를 초기화하거나 광고 개인화를 옵트아웃할 수 있습니다.</p>
+    </section>
+
+    <section>
+      <h2>8. 쿠키 및 추적 기술 (웹 한정)</h2>
+      <p>웹 버전은 Google AdSense 및 Vercel Analytics가 쿠키 또는 유사 기술을 사용할 수 있습니다. 모바일 앱은 쿠키를 사용하지 않으며, 웹 분석 도구(Vercel Analytics)도 모바일에서는 비활성화되어 있습니다.</p>
+    </section>
+
+    <section>
+      <h2>9. 개인정보 보호책임자 및 연락처</h2>
+      <ul>
+        <li>운영자: <strong>[운영자명 / 회사명]</strong></li>
+        <li>이메일: <a href="mailto:adminsequenceai@gmail.com">adminsequenceai@gmail.com</a></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>10. 정책의 변경</h2>
+      <p>본 방침은 법령·서비스 변경에 따라 개정될 수 있으며, 변경 시 본 페이지를 통해 사전 고지합니다.</p>
+    </section>
+  </div>
+
+  <!-- ────────────────  English  ──────────────── -->
+  <div lang="en">
+    <h1>Privacy Policy</h1>
+    <p class="lead">
+      This Privacy Policy describes how Asset Indicator Monitor ("the Service") collects, uses, and shares your personal information.<br />
+      Effective date: <strong>[YYYY-MM-DD]</strong>
+    </p>
+
+    <section>
+      <h2>1. Information We Collect</h2>
+      <table>
+        <thead><tr><th>Category</th><th>Items</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>Sign-in</td><td>Google account unique ID (sub), email, name, profile picture URL</td><td>Google OAuth</td></tr>
+          <tr><td>User input</td><td>Nickname, community posts, custom indicator formulas</td><td>Provided by the user</td></tr>
+          <tr><td>Advertising ID</td><td>Google Advertising ID (AAID)</td><td>Google AdMob SDK</td></tr>
+          <tr><td>Automatically collected</td><td>Access timestamps, device OS, app version, error logs</td><td>Service usage</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>2. How We Use Your Information</h2>
+      <ul>
+        <li>Account identification and session management</li>
+        <li>Hosting community posts and saving user-defined indicators</li>
+        <li>Displaying ads and measuring ad performance (Google AdMob)</li>
+        <li>Service reliability, error monitoring, and abuse prevention</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>3. Sharing With Third Parties</h2>
+      <p>We rely on the following processors. We do not sell or otherwise share your personal data with additional third parties without your consent.</p>
+      <table>
+        <thead><tr><th>Processor</th><th>Purpose</th><th>Items</th></tr></thead>
+        <tbody>
+          <tr><td>Google LLC (OAuth)</td><td>Authentication</td><td>OAuth tokens</td></tr>
+          <tr><td>Google LLC (AdMob)</td><td>Mobile ads serving / measurement</td><td>Advertising ID, device info</td></tr>
+          <tr><td>Google LLC (AdSense, web only)</td><td>Web ads serving / measurement</td><td>Cookie-based identifiers</td></tr>
+          <tr><td>Amazon Web Services (AWS, ap-northeast-2)</td><td>Storage of accounts and posts (Lambda, DynamoDB)</td><td>Sign-in info, posts, indicators</td></tr>
+          <tr><td>Vercel Inc. (web only)</td><td>Web hosting and traffic analytics</td><td>Web access logs</td></tr>
+        </tbody>
+      </table>
+      <p>Upbit and Naver Finance market data APIs are called for price retrieval only; no user-identifying information is transmitted.</p>
+    </section>
+
+    <section>
+      <h2>4. Retention</h2>
+      <ul>
+        <li>Account information: <strong>until account deletion</strong></li>
+        <li>Community posts and user-defined indicators: <strong>until account deletion or user-initiated deletion</strong></li>
+        <li>Access and error logs: up to 6 months</li>
+      </ul>
+      <p>Information required by applicable law will be retained for the legally mandated period.</p>
+    </section>
+
+    <section>
+      <h2>5. Deletion</h2>
+      <p>When the retention period expires or the purpose of processing is fulfilled, personal data is destroyed without delay. Electronic records are permanently deleted in an unrecoverable manner.</p>
+    </section>
+
+    <section>
+      <h2>6. Your Rights</h2>
+      <ul>
+        <li>Right to access, correct, delete, or restrict processing of your data</li>
+        <li>Requests may be submitted via the contact channel below after identity verification</li>
+        <li>In-app: nickname update and account deletion are available</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>7. Advertising ID</h2>
+      <p>The Service shows ads through Google AdMob and uses the Google Advertising ID (AAID) for ad personalization and fraud prevention. You can reset the ID or opt out of personalized advertising in <strong>Settings → Google → Ads</strong> on your Android device.</p>
+    </section>
+
+    <section>
+      <h2>8. Cookies and Tracking (Web Only)</h2>
+      <p>The web version may use cookies or similar technologies via Google AdSense and Vercel Analytics. The mobile app does not use cookies, and Vercel Analytics is disabled on mobile builds.</p>
+    </section>
+
+    <section>
+      <h2>9. Contact</h2>
+      <ul>
+        <li>Operator: <strong>[Operator / Company name]</strong></li>
+        <li>Email: <a href="mailto:adminsequenceai@gmail.com">adminsequenceai@gmail.com</a></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>10. Changes</h2>
+      <p>This policy may be revised in response to legal or service changes. Updates will be announced on this page in advance.</p>
+    </section>
+  </div>
+
+  <footer>
+    © Asset Indicator Monitor. By SequenceAI.
+  </footer>
+</main>
+</body>
+</html>

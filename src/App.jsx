@@ -883,7 +883,7 @@ export default function App() {
           </div>
         </footer>
       </div>
-      <Analytics />
+      {!Capacitor.isNativePlatform() && <Analytics />}
     </div>
   );
 }

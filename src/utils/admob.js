@@ -3,9 +3,21 @@ import { AdMob, BannerAdSize, BannerAdPosition } from '@capacitor-community/admo
 
 const isNative = Capacitor.isNativePlatform();
 
-// Google AdMob official Test IDs for Android (Replace with actual IDs for production)
+// Build mode controls whether real or test ad units are served.
+// Use `npm run build:release` to opt in to real ads; any other build stays on test.
+const isReleaseBuild = import.meta.env.MODE === 'release';
+
+// Google AdMob official Test IDs for Android — always safe to click.
 const TEST_BANNER_ID = 'ca-app-pub-3940256099942544/6300978111';
 const TEST_INTERSTITIAL_ID = 'ca-app-pub-3940256099942544/1033173712';
+
+// Production ad units — NEVER click these on a device you own.
+const PROD_BANNER_ID = 'ca-app-pub-7947485317948024/5488736211';
+// Interstitial not used in this build yet; placeholder kept for symmetry.
+const PROD_INTERSTITIAL_ID = TEST_INTERSTITIAL_ID;
+
+const BANNER_ID = isReleaseBuild ? PROD_BANNER_ID : TEST_BANNER_ID;
+const INTERSTITIAL_ID = isReleaseBuild ? PROD_INTERSTITIAL_ID : TEST_INTERSTITIAL_ID;
 
 /**
  * Initializes AdMob SDK. Safe to call on web/native.
@@ -29,7 +41,7 @@ export async function initAdMob() {
  * Shows a banner ad at the bottom of the screen.
  * @param {string} adUnitId AdMob banner ad unit ID
  */
-export async function showBanner(adUnitId = TEST_BANNER_ID) {
+export async function showBanner(adUnitId = BANNER_ID) {
   if (!isNative) {
     console.log('[AdMob] Not running on native platform. Skipping banner.');
     return;
@@ -40,7 +52,7 @@ export async function showBanner(adUnitId = TEST_BANNER_ID) {
       adSize: BannerAdSize.ADAPTIVE_BANNER,
       position: BannerAdPosition.BOTTOM_CENTER,
       margin: 0,
-      isTesting: true, // Force test ads. Set to false when using real ad IDs in production
+      isTesting: !isReleaseBuild,
     };
     await AdMob.showBanner(options);
     console.log('[AdMob] Banner ad shown.');
@@ -66,7 +78,7 @@ export async function hideBanner() {
  * Prepares and shows an interstitial ad.
  * @param {string} adUnitId AdMob interstitial ad unit ID
  */
-export async function showInterstitial(adUnitId = TEST_INTERSTITIAL_ID) {
+export async function showInterstitial(adUnitId = INTERSTITIAL_ID) {
   if (!isNative) {
     console.log('[AdMob] Not running on native platform. Skipping interstitial.');
     return;
@@ -74,7 +86,7 @@ export async function showInterstitial(adUnitId = TEST_INTERSTITIAL_ID) {
   try {
     await AdMob.prepareInterstitial({
       adId: adUnitId,
-      isTesting: true, // Force test ads. Set to false when using real ad IDs in production
+      isTesting: !isReleaseBuild,
     });
     await AdMob.showInterstitial();
     console.log('[AdMob] Interstitial ad shown.');

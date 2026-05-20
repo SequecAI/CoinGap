@@ -113,6 +113,7 @@ export default function App() {
   } = useUpbitData();
 
   const stockData = useStockData();
+  const [appLoginCredential, setAppLoginCredential] = useState(null);
   const { isLoggedIn, userInfo, handleLoginSuccess, logout, updateNickname } = useAuth();
   
   // Initialize AdMob and Deep Link listeners on native app startup
@@ -446,30 +447,50 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="w-full flex flex-col items-center sm:items-end gap-2">
-                    {new URLSearchParams(window.location.search).get('mode') === 'app-login' && (
-                      <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-1 rounded-lg animate-pulse text-center">
-                        📲 앱 로그인을 완료하려면 아래 구글 버튼을 클릭해주세요.
-                      </span>
+                    {new URLSearchParams(window.location.search).get('mode') === 'app-login' ? (
+                      appLoginCredential ? (
+                        <button
+                          onClick={() => {
+                            const redirectUrl = /android/i.test(navigator.userAgent)
+                              ? `intent://login?credential=${appLoginCredential}#Intent;scheme=coingap;package=com.coingap.app;end;`
+                              : `coingap://login?credential=${appLoginCredential}`;
+                            window.location.href = redirectUrl;
+                          }}
+                          className="w-full max-w-[280px] px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black border border-indigo-600 shadow-sm transition-all flex items-center justify-center gap-2 animate-bounce"
+                        >
+                          📲 앱으로 돌아가기 (로그인 완료)
+                        </button>
+                      ) : (
+                        <>
+                          <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-1 rounded-lg animate-pulse text-center">
+                            📲 앱 로그인을 완료하려면 아래 구글 버튼을 클릭해주세요.
+                          </span>
+                          <GoogleLogin
+                            onSuccess={(res) => {
+                              setAppLoginCredential(res.credential);
+                              const redirectUrl = /android/i.test(navigator.userAgent)
+                                ? `intent://login?credential=${res.credential}#Intent;scheme=coingap;package=com.coingap.app;end;`
+                                : `coingap://login?credential=${res.credential}`;
+                              window.location.href = redirectUrl;
+                            }}
+                            onError={() => console.warn('Google 로그인 실패')}
+                            size="medium"
+                            shape="pill"
+                            text="signin"
+                            theme="outline"
+                          />
+                        </>
+                      )
+                    ) : (
+                      <GoogleLogin
+                        onSuccess={handleLoginSuccess}
+                        onError={() => console.warn('Google 로그인 실패')}
+                        size="medium"
+                        shape="pill"
+                        text="signin"
+                        theme="outline"
+                      />
                     )}
-                    <GoogleLogin
-                      onSuccess={(res) => {
-                        const params = new URLSearchParams(window.location.search);
-                        if (params.get('mode') === 'app-login') {
-                          if (/android/i.test(navigator.userAgent)) {
-                            window.location.href = `intent://login?credential=${res.credential}#Intent;scheme=coingap;package=com.coingap.app;end;`;
-                          } else {
-                            window.location.href = `coingap://login?credential=${res.credential}`;
-                          }
-                          return;
-                        }
-                        handleLoginSuccess(res);
-                      }}
-                      onError={() => console.warn('Google 로그인 실패')}
-                      size="medium"
-                      shape="pill"
-                      text="signin"
-                      theme="outline"
-                    />
                   </div>
                 )}
               </div>

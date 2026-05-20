@@ -115,6 +115,21 @@ export default function App() {
   const stockData = useStockData();
   const [appLoginCredential, setAppLoginCredential] = useState(null);
   const { isLoggedIn, userInfo, handleLoginSuccess, logout, updateNickname } = useAuth();
+
+  // Check URL hash for OAuth redirect token on mount (redirect flow)
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash) {
+      const params = new URLSearchParams(hash.substring(1));
+      const idToken = params.get('id_token');
+      const state = params.get('state');
+      if (idToken && state === 'app-login') {
+        setAppLoginCredential(idToken);
+        // Clear hash from address bar
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    }
+  }, []);
   
   // Initialize AdMob and Deep Link listeners on native app startup
   useEffect(() => {
@@ -150,7 +165,7 @@ export default function App() {
 
   const handleGoogleAppLogin = async () => {
     try {
-      await Browser.open({ url: `${WEB_APP_URL}/?mode=app-login` });
+      await Browser.open({ url: `${WEB_APP_URL}/?mode=app-login&t=${Date.now()}` });
     } catch (err) {
       console.error('[App] Failed to open system browser:', err);
     }
@@ -465,20 +480,20 @@ export default function App() {
                           <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-1 rounded-lg animate-pulse text-center">
                             📲 앱 로그인을 완료하려면 아래 구글 버튼을 클릭해주세요.
                           </span>
-                          <GoogleLogin
-                            onSuccess={(res) => {
-                              setAppLoginCredential(res.credential);
-                              const redirectUrl = /android/i.test(navigator.userAgent)
-                                ? `intent://login?credential=${res.credential}#Intent;scheme=coingap;package=com.coingap.app;end;`
-                                : `coingap://login?credential=${res.credential}`;
-                              window.location.href = redirectUrl;
+                          <button
+                            onClick={() => {
+                              const clientId = '1039642666003-on2k6ric4eism39soae30645qo84vmio.apps.googleusercontent.com';
+                              const redirectUri = 'https://coin-gap.vercel.app/';
+                              const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=id_token&scope=openid%20profile%20email&state=app-login&nonce=coingapnonce_${Date.now()}`;
+                              window.location.href = authUrl;
                             }}
-                            onError={() => console.warn('Google 로그인 실패')}
-                            size="medium"
-                            shape="pill"
-                            text="signin"
-                            theme="outline"
-                          />
+                            className="w-full max-w-[280px] px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-black border border-slate-200 shadow-sm transition-all flex items-center justify-center gap-2"
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24">
+                              <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114-3.488 0-6.316-2.828-6.316-6.316s2.828-6.316 6.316-6.316c1.621 0 3.099.613 4.238 1.623l3.207-3.207C19.387 2.378 16.035 1.136 12.24 1.136 6.136 1.136 1.136 6.136 1.136 12.24s5 11.104 11.104 11.104c6.438 0 11.24-4.52 11.24-11.104 0-.747-.079-1.472-.224-2.164H12.24z" />
+                            </svg>
+                            Google 계정으로 로그인 (앱)
+                          </button>
                         </>
                       )
                     ) : (

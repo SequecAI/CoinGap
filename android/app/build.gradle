@@ -24,6 +24,12 @@ android {
     }
 }
 
+configurations.all {
+    resolutionStrategy {
+        force "androidx.browser:browser:${rootProject.ext.androidxBrowserVersion}"
+    }
+}
+
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { safeFetch } from './useUpbitData';
 
-const NAVER_BASE = '/naver-api';
+const NAVER_BASE = Capacitor.isNativePlatform() ? 'https://m.stock.naver.com' : '/naver-api';
+const NAVER_FCHART_BASE = Capacitor.isNativePlatform() ? 'https://fchart.stock.naver.com' : '/naver-fchart';
 
 // 기본 종목 리스트 (시가총액 상위)
 export const DEFAULT_STOCKS = [
@@ -80,7 +82,7 @@ export function useStockData() {
     const fetchRealtime = async () => {
       if (!isMounted) return;
       
-      const minuteUrl = `/naver-fchart/sise.nhn?symbol=${selectedStock.code}&requestType=0&count=60&timeframe=minute`;
+      const minuteUrl = `${NAVER_FCHART_BASE}/sise.nhn?symbol=${selectedStock.code}&requestType=0&count=60&timeframe=minute`;
 
       try {
         const [basicRes, kospiRes, kosdaqRes, xmlRes] = await Promise.all([

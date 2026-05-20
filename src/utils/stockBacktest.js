@@ -1,6 +1,8 @@
+import { Capacitor } from '@capacitor/core';
 import { safeFetch } from '../hooks/useUpbitData';
 
-const NAVER_BASE = '/naver-api';
+const NAVER_BASE = Capacitor.isNativePlatform() ? 'https://m.stock.naver.com' : '/naver-api';
+const NAVER_FCHART_BASE = Capacitor.isNativePlatform() ? 'https://fchart.stock.naver.com' : '/naver-fchart';
 
 // 과거 데이터를 받아올 수 없는 변수 (스냅샷 전용)
 const UNBACKTESTABLE_VARS = [
@@ -59,7 +61,7 @@ async function fetchTextSafe(url) {
 }
 
 async function fetchIndexDayCandles(indexSymbol, count = 80) {
-  const url = `/naver-fchart/sise.nhn?symbol=${indexSymbol}&timeframe=day&count=${count}&requestType=0`;
+  const url = `${NAVER_FCHART_BASE}/sise.nhn?symbol=${indexSymbol}&timeframe=day&count=${count}&requestType=0`;
   const xml = await fetchTextSafe(url);
   if (!xml) return [];
   const matches = [...xml.matchAll(/<item data="([^"]+)"/g)];

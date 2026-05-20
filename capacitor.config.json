@@ -1,5 +1,14 @@
 {
   "appId": "com.coingap.app",
   "appName": "CoinGap",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "SocialLogin": {
+      "providers": {
+        "google": true,
+        "facebook": false,
+        "apple": false
+      }
+    }
+  }
 }

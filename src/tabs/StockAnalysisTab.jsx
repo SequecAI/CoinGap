@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { Crosshair, Shield, Activity, Zap, Gauge, TrendingUp, TrendingDown, Users, Battery } from 'lucide-react';
 import {
   SignalScorePanel,
@@ -8,6 +9,8 @@ import {
   EmptyState,
   calcSignalScore,
 } from './AnalysisTab';
+
+const NAVER_FCHART_BASE = Capacitor.isNativePlatform() ? 'https://fchart.stock.naver.com' : '/naver-fchart';
 
 // ── 네이버 숫자 파싱 ──
 function parseNum(str) {
@@ -389,7 +392,7 @@ export function SqueezeEnergyPanel({ stockCode, dayCandles }) {
 
     if (!initialLoaded) setLoading(true);
     try {
-      const url = `/naver-fchart/sise.nhn?symbol=${stockCode}&requestType=0&count=${tfConfig.count * (tfConfig.minutes <= 5 ? 5 : tfConfig.minutes)}&timeframe=minute`;
+      const url = `${NAVER_FCHART_BASE}/sise.nhn?symbol=${stockCode}&requestType=0&count=${tfConfig.count * (tfConfig.minutes <= 5 ? 5 : tfConfig.minutes)}&timeframe=minute`;
       const xmlRes = await fetch(url).then(r => r.text()).catch(() => null);
 
       if (xmlRes) {

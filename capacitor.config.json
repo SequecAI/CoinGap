@@ -1,6 +1,6 @@
 {
   "appId": "com.coingap.app",
-  "appName": "CoinGap",
+  "appName": "Asset Indicator Monitor",
   "webDir": "dist",
   "plugins": {
     "SocialLogin": {
@@ -9,6 +9,9 @@
         "facebook": false,
         "apple": false
       }
+    },
+    "CapacitorHttp": {
+      "enabled": true
     }
   }
 }

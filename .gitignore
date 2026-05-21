@@ -44,3 +44,9 @@ CLUADE.ko.md
 client_secret_*.json
 *.apk
 Google OAuth*
+
+# Android signing — NEVER commit keystores or their passwords
+*.keystore
+*.jks
+keystore.properties
+key.properties

@@ -60,7 +60,8 @@ def handle_upsert_user(body):
 
     # 기존 유저 확인
     existing = users_table.get_item(Key={"userId": user_id}).get("Item")
-    
+    is_new_user = not existing
+
     action = body.get("action", "login")
     
     # 어드민은 항상 '관리자' 고정
@@ -86,7 +87,13 @@ def handle_upsert_user(body):
     item = remove_empty_strings(item)
     users_table.put_item(Item={**(existing or {}), **item})
 
-    return _response(200, {"message": "OK", "userId": user_id, "nickname": nickname, "profileImage": item.get("profileImage", "")})
+    return _response(200, {
+        "message": "OK",
+        "userId": user_id,
+        "nickname": nickname,
+        "profileImage": item.get("profileImage", ""),
+        "isNewUser": is_new_user,
+    })
 
 
 # ── POST /users (action="delete") ──

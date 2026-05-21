@@ -76,6 +76,10 @@ export function useAuth() {
     setUserInfo(null);
   }, []);
 
+  const clearNewUserFlag = useCallback(() => {
+    setUserInfo(prev => (prev ? { ...prev, isNewUser: false } : null));
+  }, []);
+
   const deleteAccount = useCallback(async () => {
     if (!userInfo) return false;
     try {
@@ -112,5 +116,5 @@ export function useAuth() {
     }).catch(err => console.warn('[useAuth] 닉네임 업데이트 실패:', err));
   }, [userInfo]);
 
-  return { isLoggedIn, userInfo, handleLoginSuccess, logout, updateNickname, deleteAccount };
+  return { isLoggedIn, userInfo, handleLoginSuccess, logout, updateNickname, deleteAccount, clearNewUserFlag };
 }

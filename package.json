@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:release": "vite build --mode release",
+    "release:android": "npm run build:release && npx cap sync android",
     "lint": "eslint .",
     "preview": "vite preview"
   },

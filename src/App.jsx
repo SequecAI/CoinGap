@@ -33,7 +33,6 @@ import StockCustomViewTab from './tabs/StockCustomViewTab';
 import IndicatorStudioTab from './tabs/IndicatorStudioTab';
 import StockEditorTab from './tabs/StockEditorTab';
 import CommunityTab from './tabs/CommunityTab';
-import MarketBrief from './components/MarketBrief';
 import { initAdMob, showBanner } from './utils/admob';
 
 const GOOGLE_WEB_CLIENT_ID = '874558352527-jpjfa7i23vrk9l30jq1od5vg93ko9g99.apps.googleusercontent.com';
@@ -696,9 +695,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* 시황 브리프 (collapsible, 헤더 직후 고정 위치) — community 모드에서는 숨김 */}
-        {appMode !== 'community' && <MarketBrief appMode={appMode} userInfo={userInfo} />}
-
+        {/* 시황 브리프 제거됨 */}
         {/* 탭 내비게이션 — community 모드에서는 숨김 */}
         {appMode !== 'community' && (
         <div className="flex gap-2 bg-slate-200/50 p-1.5 rounded-2xl">

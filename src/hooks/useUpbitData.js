@@ -1,17 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
+
+const UPBIT_BASE = Capacitor.isNativePlatform() ? 'https://api.upbit.com' : '/upbit-api';
 
 export const safeFetch = async (url) => {
-  const proxies = ['', 'https://api.codetabs.com/v1/proxy?quest=', 'https://corsproxy.io/?'];
-  for (const proxy of proxies) {
-    try {
-      const fetchUrl = proxy ? `${proxy}${encodeURIComponent(url)}` : url;
-      const response = await fetch(fetchUrl);
-      if (response.ok) {
-        const data = await response.json();
-        if (data && !data.error) return data;
-      }
-    } catch (error) { }
-  }
+  try {
+    const response = await fetch(url);
+    if (response.ok) {
+      const data = await response.json();
+      if (data && !data.error) return data;
+    }
+  } catch (error) { }
   return null;
 };
 
@@ -62,7 +61,7 @@ export function useUpbitData() {
     const initData = async () => {
       try {
         const [marketData, domData] = await Promise.all([
-          safeFetch('https://api.upbit.com/v1/market/all?isDetails=false'),
+          safeFetch(`${UPBIT_BASE}/v1/market/all?isDetails=false`),
           safeFetch('https://api.coinlore.net/api/global/')
         ]);
         if (isMounted) {
@@ -89,8 +88,8 @@ export function useUpbitData() {
     const fetchAnalyticsData = async () => {
       try {
         const [dayCandles, minCandles] = await Promise.all([
-          safeFetch(`https://api.upbit.com/v1/candles/days?market=${selectedAlt}&count=60`),
-          safeFetch(`https://api.upbit.com/v1/candles/minutes/5?market=${selectedAlt}&count=60`)
+          safeFetch(`${UPBIT_BASE}/v1/candles/days?market=${selectedAlt}&count=60`),
+          safeFetch(`${UPBIT_BASE}/v1/candles/minutes/5?market=${selectedAlt}&count=60`)
         ]);
         if (isMounted) {
           if (dayCandles && dayCandles.length > 0) {
@@ -121,7 +120,7 @@ export function useUpbitData() {
     const fetchOrderbook = async () => {
       if (!isMounted) return;
       try {
-        const data = await safeFetch(`https://api.upbit.com/v1/orderbook?markets=${selectedAlt}`);
+        const data = await safeFetch(`${UPBIT_BASE}/v1/orderbook?markets=${selectedAlt}`);
         if (isMounted && data && data[0]) {
           const totalBid = data[0].total_bid_size;
           const totalAsk = data[0].total_ask_size;
@@ -145,7 +144,7 @@ export function useUpbitData() {
         const query = selectedAlt === 'KRW-BTC'
           ? 'KRW-BTC'
           : `KRW-BTC,${selectedAlt}`;
-        const upbitData = await safeFetch(`https://api.upbit.com/v1/ticker?markets=${query}`);
+        const upbitData = await safeFetch(`${UPBIT_BASE}/v1/ticker?markets=${query}`);
         if (isMounted && upbitData) {
           const newTickers = {};
           upbitData.forEach(t => { newTickers[t.market] = t; });

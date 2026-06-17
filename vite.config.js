@@ -19,6 +19,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/naver-api/, ''),
       },
+      '/upbit-api': {
+        target: 'https://api.upbit.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/upbit-api/, ''),
+      },
     },
   },
 })

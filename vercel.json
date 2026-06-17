@@ -9,6 +9,10 @@
       "destination": "https://m.stock.naver.com/:path*"
     },
     {
+      "source": "/upbit-api/:path*",
+      "destination": "https://api.upbit.com/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

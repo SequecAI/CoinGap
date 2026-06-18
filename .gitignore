@@ -50,3 +50,10 @@ Google OAuth*
 *.jks
 keystore.properties
 key.properties
+
+# Lab backend (lambda packaging artifacts)
+backtest-lambda.zip
+backend/backtest/.build/
+
+# Reference: original CoinLeakSeeker source (kept locally for reference, not deployed)
+coinleakseeker/

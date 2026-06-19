@@ -34,9 +34,41 @@ def _rsi(close, period=14):
     return (100 - 100 / (1 + rs)).fillna(50)
 
 
+def compute_features(df, *, trim=True):
+    """
+    target+base를 join한 df → 피처 DataFrame.
+    df 컬럼: close, high, low, volume, base_close (모두 tz-aware index).
+
+    trim=True (기본/백테스트): Z_WINDOW만큼 자르고 결측 제거.
+    trim=False (실시간 evaluate): 마지막 행만 필요하므로 자르지 않고 그대로 반환.
+    """
+    out = pd.DataFrame(index=df.index)
+    out["PRICE"] = df["close"]
+    out["high"] = df["high"]
+    out["low"] = df["low"]
+    out["VOLUME"] = df["volume"]
+    out["RATIO"] = df["close"] / df["base_close"]
+
+    # Z-score: 과거 720분 통계 (shift(1)로 현재봉 제외 → 룩어헤드 방지)
+    mu = out["RATIO"].rolling(Z_WINDOW).mean().shift(1)
+    sigma = out["RATIO"].rolling(Z_WINDOW).std().shift(1)
+    out["Z_SCORE"] = ((out["RATIO"] - mu) / sigma).where(sigma > 0, 0.0)
+
+    # 하락률 % (현재 종가 / N분 전 종가 - 1)
+    out["DROP_3M"] = (df["close"] / df["close"].shift(3) - 1.0) * 100.0
+    out["DROP_5M"] = (df["close"] / df["close"].shift(5) - 1.0) * 100.0
+
+    out["RSI_14"] = _rsi(df["close"], 14)
+
+    if trim:
+        out = out.iloc[Z_WINDOW:]
+        out = out.dropna(subset=["Z_SCORE", "DROP_3M", "DROP_5M"])
+    return out
+
+
 def build_features(target_market, base_market="KRW-BTC", days=DEFAULT_DAYS):
     """
-    S3 캐시에서 target/base 1분봉을 읽어 정렬·결합한 뒤 피처 DataFrame을 반환한다.
+    S3 캐시에서 target/base 1분봉을 읽어 정렬·결합한 뒤 피처 DataFrame을 반환한다 (백테스트용).
 
     컬럼: PRICE, RATIO, Z_SCORE, DROP_3M(%), DROP_5M(%), RSI_14, VOLUME, high, low
     """
@@ -59,25 +91,50 @@ def build_features(target_market, base_market="KRW-BTC", days=DEFAULT_DAYS):
         cutoff = df.index.max() - pd.Timedelta(days=days)
         df = df[df.index >= cutoff]
 
-    out = pd.DataFrame(index=df.index)
-    out["PRICE"] = df["close"]
-    out["high"] = df["high"]
-    out["low"] = df["low"]
-    out["VOLUME"] = df["volume"]
-    out["RATIO"] = df["close"] / df["base_close"]
+    return compute_features(df, trim=True)
 
-    # Z-score: 과거 720분 통계 (shift(1)로 현재봉 제외 → 룩어헤드 방지)
-    mu = out["RATIO"].rolling(Z_WINDOW).mean().shift(1)
-    sigma = out["RATIO"].rolling(Z_WINDOW).std().shift(1)
-    out["Z_SCORE"] = ((out["RATIO"] - mu) / sigma).where(sigma > 0, 0.0)
 
-    # 하락률 % (현재 종가 / N분 전 종가 - 1)
-    out["DROP_3M"] = (df["close"] / df["close"].shift(3) - 1.0) * 100.0
-    out["DROP_5M"] = (df["close"] / df["close"].shift(5) - 1.0) * 100.0
+def candles_to_df(candles):
+    """
+    Upbit 분봉 API 응답(또는 같은 모양의 JSON)을 features용 DataFrame으로 변환.
+    candles: [{candle_date_time_utc, opening_price, high_price, low_price, trade_price, candle_acc_trade_volume}, ...]
+    반환 컬럼: close, high, low, volume (tz-aware index).
+    """
+    if not candles:
+        return pd.DataFrame()
+    rows = []
+    for c in candles:
+        ts = c.get("candle_date_time_utc") or c.get("timestamp")
+        rows.append({
+            "ts": ts,
+            "close": float(c.get("trade_price", c.get("close", 0))),
+            "high": float(c.get("high_price", c.get("high", 0))),
+            "low": float(c.get("low_price", c.get("low", 0))),
+            "volume": float(c.get("candle_acc_trade_volume", c.get("volume", 0))),
+        })
+    df = pd.DataFrame(rows).set_index("ts")
+    df.index = pd.to_datetime(df.index, utc=True)
+    df = df.sort_index()
+    df = df[~df.index.duplicated(keep="last")]
+    return df
 
-    out["RSI_14"] = _rsi(df["close"], 14)
 
-    # 통계가 안정화된 이후 구간만 사용
-    out = out.iloc[Z_WINDOW:]
-    out = out.dropna(subset=["Z_SCORE", "DROP_3M", "DROP_5M"])
-    return out
+def build_features_from_candles(target_candles, base_candles):
+    """
+    PC 엔진이 매분 호출하는 evaluate용. Upbit 분봉 응답을 그대로 받아 features 마지막 행만 정확히 나오면 된다.
+
+    target/base 모두 충분한 길이(>= Z_WINDOW+10)가 들어왔다고 가정.
+    trim=False라서 결측 포함된 초기 구간도 그대로 살아있다 — 호출부가 .iloc[-1]만 사용해야 의미가 있다.
+    """
+    tdf = candles_to_df(target_candles)
+    bdf = candles_to_df(base_candles)
+    if tdf.empty:
+        raise ValueError("target candles is empty")
+    if bdf.empty:
+        # base 없으면 target 자기 자신과의 ratio = 1 (Z_SCORE는 0이 됨)
+        df = tdf.copy()
+        df["base_close"] = df["close"]
+    else:
+        bdf = bdf[["close"]].rename(columns={"close": "base_close"})
+        df = tdf.join(bdf, how="inner")
+    return compute_features(df, trim=False)

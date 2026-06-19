@@ -5,6 +5,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import { Capacitor } from '@capacitor/core'
 import App from './App.jsx'
 import LabPage from './lab/LabPage.jsx'
+import LivePage from './live/LivePage.jsx'
 import './index.css' // ★ 이 줄이 반드시 있어야 합니다 ★
 
 const GOOGLE_CLIENT_ID = '874558352527-jpjfa7i23vrk9l30jq1od5vg93ko9g99.apps.googleusercontent.com';
@@ -23,6 +24,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <BrowserRouter>
         <Routes>
           <Route path="/lab/*" element={<LabPage />} />
+          <Route path="/live" element={<LivePage />} />
           <Route path="/*" element={<App />} />
         </Routes>
       </BrowserRouter>

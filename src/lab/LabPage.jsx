@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Beaker, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Beaker, CheckCircle2, XCircle, Loader2, User, LogIn } from 'lucide-react';
 import { labApi } from './api.js';
+import Builder from './Builder.jsx';
+import { useAuth } from '../hooks/useAuth.js';
 
 /**
  * Lab 메인 페이지 (Phase A 시작점, 자동매매 백테스트 빌더 진입점).
@@ -13,6 +15,8 @@ import { labApi } from './api.js';
  * src/main.jsx의 <Route path="/lab/*"> 로 연결된다.
  */
 export default function LabPage() {
+  const { isLoggedIn, userInfo } = useAuth();
+
   const [checks, setChecks] = useState({
     variables: { status: 'pending', detail: '' },
     sharedLogics: { status: 'pending', detail: '' },
@@ -92,47 +96,48 @@ export default function LabPage() {
               </p>
             </div>
           </div>
-          <Link
-            to="/"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-colors"
-          >
-            <ArrowLeft size={14} />
-            coingap으로
-          </Link>
+          <div className="flex items-center gap-2">
+            <AuthBadge isLoggedIn={isLoggedIn} userInfo={userInfo} />
+            <Link
+              to="/"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-colors"
+            >
+              <ArrowLeft size={14} />
+              coingap으로
+            </Link>
+          </div>
         </div>
 
-        {/* 백엔드 헬스체크 */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+        {/* 빌더 (개발 중) */}
+        <Builder isLoggedIn={isLoggedIn} userInfo={userInfo} />
+
+        {/* 백엔드 헬스체크 (접기, 진단용) */}
+        <details className="bg-white rounded-2xl border border-slate-200 shadow-sm group">
+          <summary className="cursor-pointer select-none p-5 flex items-center justify-between">
             <div>
-              <h2 className="text-base font-black text-slate-900">백엔드 헬스체크</h2>
-              <p className="text-xs text-slate-500 mt-1 font-medium">
-                Lambda 4개 라우트가 정상 응답하는지 확인합니다.
+              <h2 className="text-sm font-black text-slate-700">백엔드 헬스체크</h2>
+              <p className="text-[11px] text-slate-400 mt-0.5 font-medium">
+                Lambda 4개 라우트 진단 (개발 보조)
               </p>
             </div>
             <button
-              onClick={runHealthChecks}
-              className="px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                runHealthChecks();
+              }}
+              className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-colors"
             >
               다시 실행
             </button>
-          </div>
+          </summary>
 
-          <div className="space-y-2">
+          <div className="px-5 pb-5 space-y-2">
             <CheckRow label="GET /variables" check={checks.variables} />
             <CheckRow label="GET /logics/shared" check={checks.sharedLogics} />
             <CheckRow label="POST /validate" check={checks.validate} />
             <CheckRow label="POST /backtest (28일)" check={checks.backtest} />
           </div>
-        </div>
-
-        {/* 안내 */}
-        <div className="bg-violet-50 p-5 rounded-2xl border border-violet-100">
-          <p className="text-xs text-violet-800 font-medium leading-relaxed">
-            <strong>다음 단계:</strong> 빌더 컴포넌트(진입·익절·손절 조건 작성), 백테스트 결과 차트,
-            내 로직 보관함을 차례로 추가합니다. 지금은 백엔드 연결만 확인하는 단계입니다.
-          </p>
-        </div>
+        </details>
 
         <footer className="mt-12 pt-8 border-t border-slate-200 text-center">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -140,6 +145,38 @@ export default function LabPage() {
           </p>
         </footer>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Lab 헤더 우측에 표시되는 로그인 상태 칩.
+ * - 로그인 시: 프로필 아이콘 + 닉네임 (이메일 툴팁)
+ * - 비로그인 시: coingap 메인으로 로그인하라는 안내 링크
+ *
+ * Lab 자체에는 GoogleLogin UI를 두지 않는다 — coingap과 동일 origin이라
+ * localStorage 세션을 공유하므로 메인에서 한 번만 로그인하면 Lab도 자동 인식.
+ */
+function AuthBadge({ isLoggedIn, userInfo }) {
+  if (!isLoggedIn) {
+    return (
+      <Link
+        to="/"
+        title="coingap 메인에서 로그인하면 Lab에서도 자동으로 인식됩니다"
+        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-bold transition-colors"
+      >
+        <LogIn size={14} />
+        <span className="hidden sm:inline">로그인 필요</span>
+      </Link>
+    );
+  }
+  return (
+    <div
+      title={userInfo?.email || ''}
+      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold"
+    >
+      <User size={14} />
+      <span className="max-w-[120px] truncate">{userInfo?.nickname || '사용자'}</span>
     </div>
   );
 }

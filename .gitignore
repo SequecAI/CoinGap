@@ -55,5 +55,12 @@ key.properties
 backtest-lambda.zip
 backend/backtest/.build/
 
+# Desktop (Electron) build artifacts
+desktop/dist/
+desktop/dist-electron/
+desktop/node_modules/
+# Desktop OAuth client secrets (never commit)
+desktop/.env
+
 # Reference: original CoinLeakSeeker source (kept locally for reference, not deployed)
 coinleakseeker/

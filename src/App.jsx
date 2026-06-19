@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useLocation, useNavigate, Routes, Route, Navigate } from 'react-router-dom';
+import { useLocation, useNavigate, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { SocialLogin } from '@capgo/capacitor-social-login';
 import {
@@ -267,6 +267,14 @@ function HeaderMenu({ isLoggedIn, onLogout, onDeleteAccount }) {
           {isLoggedIn && (
             <>
               <div className="border-t border-slate-100" />
+              <Link
+                to="/live"
+                onClick={closeAnd()}
+                className={`${itemBase} text-slate-700 hover:bg-slate-50`}
+              >
+                <Activity size={14} className="text-violet-500" />
+                운영 현황
+              </Link>
               <button
                 onClick={closeAnd(onLogout)}
                 className={`${itemBase} text-slate-700 hover:bg-slate-50`}

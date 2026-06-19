@@ -57,6 +57,23 @@ const { EngineService } = require('./engine');
 
 const engine = new EngineService();
 
+// 종료 시 LabRuns 항목을 직접 DELETE — renderer의 useRunSync가 처리하기 전에
+// 창이 파괴되는 경우 백엔드에 stale 상태가 남는 걸 막는다.
+const BACKEND_BASE = 'https://s8qnx3ch2k.execute-api.ap-northeast-2.amazonaws.com';
+async function deleteRunStateForCurrentUser() {
+  try {
+    const auth = authstore.load();
+    const userId = auth?.userInfo?.userId;
+    if (!userId) return;
+    await fetch(
+      `${BACKEND_BASE}/runs/state?userId=${encodeURIComponent(userId)}`,
+      { method: 'DELETE' }
+    );
+  } catch (e) {
+    console.warn('[main] deleteRunState on shutdown failed:', e.message);
+  }
+}
+
 // 메인 프로세스의 unhandled exception/rejection이 다이얼로그로 떠 사용자를 놀라게 하지 않도록 콘솔로만 기록.
 // (특히 창을 닫는 순간 in-flight tick의 fetch reject가 발생하기 쉬움)
 process.on('uncaughtException', (e) => {
@@ -116,6 +133,7 @@ ipcMain.handle('engine:stop', () => {
   return engine.status();
 });
 ipcMain.handle('engine:status', () => engine.status());
+ipcMain.handle('engine:remote', async (_e, { command }) => engine.handleRemoteCommand(command));
 
 function summarizeAccounts(accounts) {
   let krw = 0;
@@ -175,19 +193,28 @@ function createWindow() {
 
   mainWindow = win;
   engine.setWindow(win);
-  // 'close'는 파괴 직전 → 여기서 엔진 timer를 정리해야 in-flight tick의
-  // 결과가 destroyed webContents로 send되는 사고를 막을 수 있다.
-  win.on('close', () => {
+  // 'close'는 파괴 직전. 엔진 timer 정리 + 백엔드 LabRuns DELETE까지 끝내고 destroy.
+  // preventDefault 후 cleanup → destroy 패턴으로 안전하게 정리.
+  let cleaningUp = false;
+  win.on('close', (e) => {
+    if (cleaningUp) return;
     if (engine.state === 'running') engine.stop();
+    e.preventDefault();
+    cleaningUp = true;
+    deleteRunStateForCurrentUser().finally(() => {
+      try { win.destroy(); } catch {}
+    });
   });
   win.on('closed', () => {
     if (mainWindow === win) mainWindow = null;
   });
 }
 
-// 앱 종료 직전에도 엔진을 한 번 더 정리 (close 이벤트가 누락되는 종료 경로 안전망)
+// 앱 종료 직전에도 엔진을 한 번 더 정리 + DELETE (close 이벤트가 누락되는 종료 경로 안전망)
 app.on('before-quit', () => {
   if (engine.state === 'running') engine.stop();
+  // fire-and-forget — quit을 막을 수 없음 (close에서 이미 처리되는 게 정상 흐름)
+  deleteRunStateForCurrentUser();
 });
 
 app.whenReady().then(() => {

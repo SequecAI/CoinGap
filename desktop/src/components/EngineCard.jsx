@@ -29,7 +29,7 @@ export default function EngineCard({ state, context, error, onStop }) {
           <div>
             <h2 className="text-sm font-black text-slate-800">실행 엔진</h2>
             <p className="text-[11px] text-slate-500 font-medium">
-              {running ? `${isLive ? '실거래' : '모의투자'} 모드 · 10초 주기 평가 중` :
+              {running ? `${isLive ? '실거래' : '모의투자'} 모드 · 5초 주기 평가 중` :
                state === 'stopped' ? '중지됨' : '대기 중'}
             </p>
           </div>
@@ -69,7 +69,7 @@ function IdleView() {
         모의투자가 시작됩니다.
       </p>
       <p className="text-[10px] text-slate-300 font-medium mt-3">
-        시드머니 1,000,000원 · 10초마다 진입/청산 조건 평가 · 실거래 옵션은 C6에서 추가
+        시드머니 1,000,000원 · 5초마다 진입/청산 조건 평가
       </p>
     </div>
   );
@@ -128,13 +128,17 @@ function RunningView({ state, context, error, onStop }) {
         <Stat icon={<Activity size={12} />} label="거래수" value={String(context.tradeCount)} />
       </div>
 
+      {context.pendingOrder && (
+        <PendingOrderBlock pendingOrder={context.pendingOrder} />
+      )}
+
       {context.position ? (
         <PositionBlock position={context.position} lastEval={context.lastEval} />
-      ) : (
+      ) : !context.pendingOrder ? (
         <p className="text-[11px] text-slate-500 font-medium px-3 py-2 rounded-xl bg-slate-50 border border-slate-100">
           현재 포지션 없음 · 다음 신호: <strong className="text-slate-700">{describeAction(action)}</strong>
         </p>
-      )}
+      ) : null}
 
       {error && (
         <ErrBlock>{error}</ErrBlock>
@@ -150,7 +154,7 @@ function RunningView({ state, context, error, onStop }) {
 
 /**
  * 시작 시각 / 경과 시간 / 다음 평가까지 남은 시간을 1초마다 갱신해 표시.
- * 상위 status가 매 tick(10초)마다 들어오지만, 카운트다운은 그 사이에도 흘러가야 하므로 자체 1초 타이머.
+ * 상위 status가 매 tick(5초)마다 들어오지만, 카운트다운은 그 사이에도 흘러가야 하므로 자체 1초 타이머.
  */
 function TimingRow({ startedAt, nextTickAt, running }) {
   const [now, setNow] = useState(() => Date.now());
@@ -239,6 +243,49 @@ function fmtDuration(totalSec) {
   return `${s}초`;
 }
 function pad(n) { return String(n).padStart(2, '0'); }
+
+/**
+ * 진행 중인 지정가 주문 표시 (step9 패턴: 60초까지 우직하게 줄서기).
+ * 카운트다운으로 남은 대기 시간을 보여준다.
+ */
+function PendingOrderBlock({ pendingOrder }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const placedMs = new Date(pendingOrder.placedAt).getTime();
+  const elapsedSec = Math.max(0, Math.floor((now - placedMs) / 1000));
+  const timeoutSec = Math.max(1, Math.floor(pendingOrder.timeoutMs / 1000));
+  const remainingSec = Math.max(0, Math.floor((pendingOrder.timeoutMs - (now - placedMs)) / 1000));
+  const label = pendingOrder.action === 'ENTER' ? '진입 지정가 대기'
+    : pendingOrder.action === 'EXIT_TP' ? '익절 지정가 대기'
+    : '손절 지정가 대기';
+  const sideLabel = pendingOrder.side === 'bid' ? '매수' : '매도';
+  const tailText = pendingOrder.fallbackToMarket
+    ? '미체결분 자동 취소 후 시장가로 강제 청산. 신호 재평가는 멈춥니다.'
+    : '미체결분 자동 취소. 그동안 신호 재평가는 멈춥니다 (줄서기 우선순위 유지).';
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-1.5">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-black text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
+          <Loader2 size={11} className="animate-spin" />
+          {label}
+        </p>
+        <span className="text-[11px] font-bold tabular-nums text-amber-700">
+          {elapsedSec}초 / {timeoutSec}초
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] font-bold tabular-nums">
+        <span className="text-slate-500">{sideLabel} {pendingOrder.rank}호가 <span className="text-slate-800">{fmtKrw(pendingOrder.intendedPrice)}</span></span>
+        <span className="text-slate-500">수량 <span className="text-slate-800">{Number(pendingOrder.intendedQty).toFixed(6)}</span></span>
+      </div>
+      <p className="text-[10px] text-amber-700 font-medium leading-relaxed pt-1 border-t border-amber-100">
+        {remainingSec}초 후 {tailText}
+      </p>
+    </div>
+  );
+}
 
 function PositionBlock({ position, lastEval }) {
   const cur = position.currentPrice;

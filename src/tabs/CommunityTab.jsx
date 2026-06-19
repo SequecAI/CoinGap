@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   MessageSquare, Trophy, PenLine, Send, RefreshCcw, LogIn, User, Eye,
-  ThumbsUp, ChevronDown, ChevronUp, AlertCircle, BarChart3, ShieldCheck, Search
+  ThumbsUp, ChevronDown, ChevronUp, AlertCircle, BarChart3, ShieldCheck, Search,
+  Beaker, Download, TrendingUp, Activity,
 } from 'lucide-react';
 import { useCommunity } from '../hooks/useCommunity';
+import { useMyLogics } from '../lab/hooks/useMyLogics';
+import { labApi } from '../lab/api';
 
 const CRYPTO_STORAGE_KEY = 'coinGap_studioIndicators';
 const STOCK_STORAGE_KEY = 'coinGap_stockStudioIndicators';
@@ -53,6 +56,22 @@ function calcIndicatorScore(backtest) {
     score += (winRate - 50) * b.wins;
   });
   return Math.round(score);
+}
+
+// ── 로직 점수 계산 헬퍼 ──
+// 우선순위: 승률 > 수익률 > MDD. 거래수를 곱해 표본 가중 (지표 점수와 동일 철학).
+//   core = (승률-50) × 3 + 수익률 × 2 − |MDD| × 1
+//   score = core × 거래수
+// 거래수가 많을수록 양·음수 모두 증폭. 승률 50% 미만이면 음수 베이스.
+function calcLogicScore(backtest) {
+  if (!backtest) return null;
+  const ret = Number(backtest.total_return_pct);
+  const mdd = Math.abs(Number(backtest.mdd_pct) || 0);
+  const winRate = Number(backtest.win_rate_pct);
+  const trades = Number(backtest.total_trades) || 0;
+  if (!isFinite(ret) || !isFinite(winRate) || trades < 1) return null;
+  const core = (winRate - 50) * 3 + ret * 2 - mdd;
+  return Math.round(core * trades);
 }
 
 function formatCompactPeriod(bt, mode) {
@@ -724,6 +743,22 @@ export default function CommunityTab({ isLoggedIn, userInfo, subTab, onSubTabCha
       .slice(0, 5);
   }, [posts, subTab]);
 
+  // 로직 랭킹: 백테스트 결과 기준 정렬 (전체 표시, 각 카드에 순위 매김).
+  // 점수가 null인(백테스트 결과 없는) 항목은 항상 뒤로.
+  const rankedLogicPosts = useMemo(() => {
+    if (subTab !== 'logic') return [];
+    return [...posts]
+      .map(p => ({ ...p, _score: calcLogicScore(p.backtest || p.logic?.backtest) }))
+      .sort((a, b) => {
+        const sa = a._score;
+        const sb = b._score;
+        if (sa == null && sb == null) return 0;
+        if (sa == null) return 1;
+        if (sb == null) return -1;
+        return sb - sa;
+      });
+  }, [posts, subTab]);
+
   // 자유게시판: 검색 및 페이지네이션
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -752,12 +787,16 @@ export default function CommunityTab({ isLoggedIn, userInfo, subTab, onSubTabCha
       {/* 서브 탭 */}
       <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl">
         <button onClick={() => onSubTabChange('indicator')}
-          className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${subTab === 'indicator' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
-          <Trophy size={16} />지표 랭킹
+          className={`flex-1 py-3 px-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${subTab === 'indicator' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
+          <Trophy size={14} />지표 랭킹
+        </button>
+        <button onClick={() => onSubTabChange('logic')}
+          className={`flex-1 py-3 px-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${subTab === 'logic' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
+          <Beaker size={14} />로직 랭킹
         </button>
         <button onClick={() => onSubTabChange('board')}
-          className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${subTab === 'board' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
-          <MessageSquare size={16} />자유게시판
+          className={`flex-1 py-3 px-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${subTab === 'board' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
+          <MessageSquare size={14} />자유게시판
         </button>
       </div>
 
@@ -770,6 +809,26 @@ export default function CommunityTab({ isLoggedIn, userInfo, subTab, onSubTabCha
           </div>
           <p className="text-xs text-slate-500 font-medium leading-relaxed">
             코인·주식 시장에 대한 자유로운 의견을 나눠보세요. 투자 조언이 아닌 참고용 정보입니다.
+          </p>
+        </div>
+      ) : subTab === 'logic' ? (
+        <div className="bg-gradient-to-br from-violet-50 to-white p-6 rounded-[2.5rem] border border-violet-100 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Beaker size={20} className="text-violet-500" />
+              <h3 className="text-lg font-black text-violet-900">로직 랭킹</h3>
+            </div>
+            <button onClick={() => fetchPosts('logic')} className="text-[10px] font-bold text-violet-600 hover:text-violet-800 transition-colors flex items-center gap-1 bg-violet-100 px-2 py-1 rounded-full">
+              <RefreshCcw size={10} />새로고침
+            </button>
+          </div>
+          <p className="text-xs text-slate-500 font-medium leading-relaxed mt-2">
+            다른 사람이 Lab에서 만든 자동매매 로직을 가져와 내 보관함에 추가하세요.
+            가져온 로직은 자유롭게 수정·실행할 수 있습니다.
+          </p>
+          <p className="text-[10px] text-slate-400 font-medium mt-2">
+            ※ 점수 = ((승률−50)×3 + 수익률×2 − MDD) × 거래수.
+            승률을 최우선, 수익률·MDD를 보조로 반영하고 거래수가 많을수록 표본 신뢰도가 가산됩니다.
           </p>
         </div>
       ) : (
@@ -903,6 +962,292 @@ export default function CommunityTab({ isLoggedIn, userInfo, subTab, onSubTabCha
           </div>
           {isLoggedIn ? <IndicatorShareForm userInfo={userInfo} onSubmit={handleCreatePost} /> : <LoginPrompt />}
         </div>
+      )}
+
+      {/* 로직 공유: 카드 목록 */}
+      {subTab === 'logic' && (
+        <div className="space-y-3">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <RefreshCcw className="animate-spin text-violet-500" size={24} />
+              <span className="ml-2 text-sm font-bold text-slate-400">불러오는 중...</span>
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex items-start gap-3">
+              <AlertCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-black text-red-600">데이터 로딩 실패</p>
+                <p className="text-xs font-medium text-red-500 mt-1">{error}</p>
+              </div>
+            </div>
+          ) : rankedLogicPosts.length === 0 ? (
+            <EmptyState text="아직 공유된 로직이 없습니다. 첫 번째로 공유해보세요!" />
+          ) : (
+            rankedLogicPosts.map((p, i) => (
+              <LogicShareCard
+                key={p.postId}
+                post={p}
+                rank={i + 1}
+                score={p._score}
+                userInfo={userInfo}
+                onDelete={handleDeletePost}
+              />
+            ))
+          )}
+        </div>
+      )}
+
+      {/* 작성 영역 (로직 공유) */}
+      {subTab === 'logic' && (
+        <div className="mt-8 space-y-3">
+          <div className="flex items-center px-1">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              Share Your Logic
+            </span>
+          </div>
+          {isLoggedIn ? <LogicShareForm userInfo={userInfo} onSubmit={handleCreatePost} /> : <LoginPrompt />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── 로직 공유 카드 ──
+function LogicShareCard({ post, rank, score, userInfo, onDelete }) {
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState(null);
+  const bt = post.backtest || post.logic?.backtest;
+  // 랭킹은 커뮤니티 자산이므로 관리자만 삭제 가능 (본인도 삭제 X).
+  const isAdmin = userInfo?.email === 'adminsequenceai@gmail.com';
+
+  const handleImport = async () => {
+    if (!userInfo) { setImportMsg({ tone: 'rose', text: '먼저 로그인해주세요.' }); return; }
+    if (!post.logic) { setImportMsg({ tone: 'rose', text: '잘못된 로직 데이터입니다.' }); return; }
+    setImporting(true);
+    setImportMsg(null);
+    try {
+      const res = await labApi.saveLogicSafe(userInfo.userId, post.logic);
+      if (res?.error === 'slot_full') {
+        setImportMsg({ tone: 'amber', text: '보관함이 가득 찼습니다. Lab의 보관함에서 하나 삭제 후 다시 시도하세요.' });
+      } else if (res?.ok) {
+        setImportMsg({ tone: 'emerald', text: '내 보관함에 추가했습니다!' });
+      } else {
+        setImportMsg({ tone: 'rose', text: res?.error || '가져오기 실패' });
+      }
+    } catch (e) {
+      setImportMsg({ tone: 'rose', text: e.message || '가져오기 실패' });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  return (
+    <div className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${rank === 1 ? 'border-amber-300 ring-2 ring-amber-100' : 'border-slate-100'}`}>
+      {rank != null && (
+        <div className={`px-4 sm:px-5 py-2 flex items-center justify-between gap-2 ${rank === 1 ? 'bg-amber-50' : rank <= 3 ? 'bg-slate-50' : 'bg-white'}`}>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-black tabular-nums ${rank === 1 ? 'text-amber-700' : rank <= 3 ? 'text-slate-700' : 'text-slate-400'}`}>
+              {rank === 1 && '🏆 '}{rank}위
+            </span>
+            {score != null && (
+              <span className="text-[10px] font-bold text-slate-400 tabular-nums">
+                점수 {score >= 0 ? '+' : ''}{score}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+      <div className="p-4 sm:p-5 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {post.profileImage ? (
+              <img src={post.profileImage} alt="" className="w-7 h-7 rounded-full" />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center">
+                <User size={14} className="text-slate-500" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-xs font-black text-slate-800 truncate">{renderNickname(post.nickname)}</p>
+              <p className="text-[10px] text-slate-400 font-bold">{timeAgo(post.createdAt)}</p>
+            </div>
+          </div>
+          {isAdmin && onDelete && (
+            <button onClick={() => onDelete(post)} className="text-[10px] text-rose-400 hover:text-rose-600 font-bold">삭제(관리자)</button>
+          )}
+        </div>
+
+        <div>
+          <p className="text-base font-black text-slate-900 leading-tight">{post.title}</p>
+          <p className="text-[11px] text-slate-500 font-bold tabular-nums mt-1">
+            {post.symbol || post.logic?.symbol || '—'}
+            {post.logic?.allocation_pct != null && <> · 투입 {post.logic.allocation_pct}%</>}
+          </p>
+        </div>
+
+        {post.content && (
+          <p className="text-xs text-slate-600 font-medium leading-relaxed whitespace-pre-wrap">{post.content}</p>
+        )}
+
+        {bt && (
+          <div className="grid grid-cols-4 gap-1.5">
+            <LogicBtStat label="수익률" value={fmtLogicPct(bt.total_return_pct)} positive={(bt.total_return_pct ?? 0) >= 0} />
+            <LogicBtStat label="승률" value={bt.win_rate_pct != null ? `${bt.win_rate_pct}%` : '—'} />
+            <LogicBtStat label="MDD" value={bt.mdd_pct != null ? `${bt.mdd_pct}%` : '—'} tone="rose" />
+            <LogicBtStat label="거래수" value={String(bt.total_trades ?? '—')} />
+          </div>
+        )}
+
+        <button onClick={handleImport} disabled={importing}
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-violet-50 hover:bg-violet-100 disabled:opacity-50 text-violet-700 text-xs font-bold transition-colors">
+          {importing ? <RefreshCcw size={13} className="animate-spin" /> : <Download size={13} />}
+          {importing ? '가져오는 중...' : '내 보관함에 가져오기'}
+        </button>
+
+        {importMsg && (
+          <p className={`text-[11px] font-bold ${importMsg.tone === 'emerald' ? 'text-emerald-600' : importMsg.tone === 'amber' ? 'text-amber-600' : 'text-rose-600'}`}>
+            {importMsg.text}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LogicBtStat({ label, value, positive, tone }) {
+  const color =
+    tone === 'rose' ? 'text-rose-600' :
+    positive === false ? 'text-rose-600' :
+    positive === true ? 'text-emerald-600' :
+    'text-slate-700';
+  return (
+    <div className="rounded-lg bg-slate-50 border border-slate-100 px-2 py-1.5 text-center">
+      <p className="text-[9px] font-black text-slate-400 uppercase">{label}</p>
+      <p className={`text-xs font-black tabular-nums ${color}`}>{value}</p>
+    </div>
+  );
+}
+
+function fmtLogicPct(v) {
+  if (typeof v !== 'number') return '—';
+  return `${v >= 0 ? '+' : ''}${v}%`;
+}
+
+// ── 로직 공유 폼 ──
+function LogicShareForm({ userInfo, onSubmit }) {
+  const [showForm, setShowForm] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
+  const [content, setContent] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { logics, loading } = useMyLogics(userInfo?.userId);
+  const selected = logics.find(l => l.logicId === selectedId);
+
+  const handleSubmit = async () => {
+    if (!selected) return;
+    setIsSubmitting(true);
+    try {
+      // 보관함 메타(userId, logicId, savedAt 등) 제외하고 룰셋만 추출
+      const cleanLogic = {
+        name: selected.name,
+        symbol: selected.symbol,
+        days: selected.days,
+        allocation_pct: selected.allocation_pct,
+        fee_pct: selected.fee_pct,
+        slippage_pct: selected.slippage_pct,
+        entry: selected.entry,
+        takeProfit: selected.takeProfit,
+        stopLoss: selected.stopLoss,
+        entry_order: selected.entry_order,
+        takeProfit_order: selected.takeProfit_order,
+        stopLoss_order: selected.stopLoss_order,
+      };
+      await onSubmit({
+        type: 'logic',
+        userId: userInfo.userId,
+        nickname: userInfo.nickname,
+        profileImage: userInfo.profileImage,
+        title: selected.name,
+        content: content.trim(),
+        logic: cleanLogic,
+        symbol: selected.symbol,
+        backtest: selected.backtest || null,
+      });
+      setShowForm(false);
+      setSelectedId(null);
+      setContent('');
+    } catch (err) {
+      alert('공유 실패: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!showForm) {
+    return (
+      <button onClick={() => setShowForm(true)}
+        className="w-full py-4 bg-violet-500 hover:bg-violet-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-violet-200 transition-all flex items-center justify-center gap-2 active:scale-95">
+        <Beaker size={18} />내 로직 공유하기
+      </button>
+    );
+  }
+
+  return (
+    <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-black text-slate-700">로직 공유하기</span>
+        <button onClick={() => { setShowForm(false); setSelectedId(null); }} className="text-xs font-bold text-slate-400 hover:text-slate-600">취소</button>
+      </div>
+
+      {loading ? (
+        <div className="py-4 text-center text-xs text-slate-400">보관함 불러오는 중...</div>
+      ) : logics.length === 0 ? (
+        <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-6 text-center">
+          <p className="text-sm font-bold text-slate-400">Lab 보관함에 저장된 로직이 없습니다.</p>
+          <p className="text-xs text-slate-400 mt-1">먼저 Lab에서 로직을 만들고 저장해 주세요.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter ml-1">보관함에서 선택</p>
+          {logics.map(l => {
+            const isSelected = l.logicId === selectedId;
+            const bt = l.backtest;
+            return (
+              <button key={l.logicId} onClick={() => setSelectedId(l.logicId)}
+                className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${isSelected ? 'border-violet-400 bg-violet-50 shadow-md' : 'border-slate-100 bg-white hover:border-violet-300'}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-slate-800 truncate">{l.name}</p>
+                    <p className="text-[10px] text-slate-400 font-bold tabular-nums">
+                      {l.symbol}{l.days ? ` · ${l.days}일` : ''}
+                    </p>
+                  </div>
+                  {bt && (
+                    <div className="flex flex-col items-end shrink-0">
+                      <span className={`text-xs font-black tabular-nums ${(bt.total_return_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {fmtLogicPct(bt.total_return_pct)}
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-bold">승률 {bt.win_rate_pct ?? '—'}%</span>
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {selected && (
+        <>
+          <textarea placeholder="로직 설명, 추천 이유, 적용 종목/시장 상황 등을 작성하세요..."
+            className="w-full bg-white border border-slate-200 rounded-xl p-3 font-medium text-sm outline-none focus:ring-2 focus:ring-violet-500 transition-all resize-none h-24"
+            value={content} onChange={(e) => setContent(e.target.value)} />
+          <button onClick={handleSubmit} disabled={isSubmitting}
+            className="w-full py-3 bg-violet-500 hover:bg-violet-600 disabled:bg-slate-300 text-white rounded-xl font-black text-sm shadow-lg shadow-violet-200 transition-all flex items-center justify-center gap-2 active:scale-95">
+            {isSubmitting ? <RefreshCcw size={16} className="animate-spin" /> : <Send size={16} />}
+            {isSubmitting ? '공유 중...' : '로직 공유하기'}
+          </button>
+        </>
       )}
     </div>
   );

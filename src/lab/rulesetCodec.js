@@ -15,9 +15,26 @@
  * 매칭하지 않으면 한 글자 연산자(< / >)에 잘려나가므로 길이 내림차순 정렬.
  */
 
-import { OPS, DEFAULT_PARAMS, DEFAULT_NAME, DEFAULT_SYMBOL, DEFAULT_DAYS } from './constants.js';
+import {
+  OPS, DEFAULT_PARAMS, DEFAULT_NAME, DEFAULT_SYMBOL, DEFAULT_DAYS,
+  DEFAULT_ENTRY_ORDER, DEFAULT_TAKE_PROFIT_ORDER, DEFAULT_STOP_LOSS_ORDER,
+} from './constants.js';
 
 const OPS_SORTED = [...OPS].sort((a, b) => b.length - a.length);
+
+function clampRank(v) {
+  const n = Number(v);
+  if (!isFinite(n) || n < 1) return 1;
+  if (n > 3) return 3;
+  return Math.round(n);
+}
+
+function clampTimeout(v, fallback) {
+  const n = Number(v);
+  if (!isFinite(n) || n < 1) return fallback;
+  // 너무 짧거나 길지 않도록 1~600초로 가드
+  return Math.min(600, Math.max(1, Math.round(n)));
+}
 
 export function parseExpr(s) {
   const str = (s || '').trim();
@@ -78,6 +95,24 @@ export function logicToBuilderState(logic) {
       entry: groupsFromLogic(logic?.entry),
       takeProfit: groupsFromLogic(logic?.takeProfit),
       stopLoss: groupsFromLogic(logic?.stopLoss),
+    },
+    entryOrder: {
+      strategy: logic?.entry_order?.strategy || DEFAULT_ENTRY_ORDER.strategy,
+      offset_ticks: Number(logic?.entry_order?.offset_ticks) || 0,
+      orderbook_rank: clampRank(logic?.entry_order?.orderbook_rank),
+      timeout_sec: clampTimeout(logic?.entry_order?.timeout_sec, DEFAULT_ENTRY_ORDER.timeout_sec),
+    },
+    takeProfitOrder: {
+      strategy: logic?.takeProfit_order?.strategy || DEFAULT_TAKE_PROFIT_ORDER.strategy,
+      offset_ticks: Number(logic?.takeProfit_order?.offset_ticks) || 0,
+      orderbook_rank: clampRank(logic?.takeProfit_order?.orderbook_rank),
+      timeout_sec: clampTimeout(logic?.takeProfit_order?.timeout_sec, DEFAULT_TAKE_PROFIT_ORDER.timeout_sec),
+    },
+    stopLossOrder: {
+      strategy: logic?.stopLoss_order?.strategy || DEFAULT_STOP_LOSS_ORDER.strategy,
+      offset_ticks: Number(logic?.stopLoss_order?.offset_ticks) || 0,
+      orderbook_rank: clampRank(logic?.stopLoss_order?.orderbook_rank),
+      timeout_sec: clampTimeout(logic?.stopLoss_order?.timeout_sec, DEFAULT_STOP_LOSS_ORDER.timeout_sec),
     },
   };
 }

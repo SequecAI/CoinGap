@@ -14,7 +14,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('coingap', {
   app: {
-    version: '0.1.0',
+    version: '1.0.0',
     platform: process.platform,
   },
   auth: {
@@ -40,6 +40,8 @@ contextBridge.exposeInMainWorld('coingap', {
     start: (logic, options) => ipcRenderer.invoke('engine:start', { logic, options }),
     stop: () => ipcRenderer.invoke('engine:stop'),
     status: () => ipcRenderer.invoke('engine:status'),
+    // 원격 명령 처리 ('stop' 또는 { action: 'start', logic })
+    remote: (command) => ipcRenderer.invoke('engine:remote', { command }),
     // 이벤트 구독. 반환된 함수를 호출하면 해지.
     on: (event, cb) => {
       const channel = `engine:${event}`;

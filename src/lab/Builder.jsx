@@ -6,10 +6,9 @@ import SectionEditor from './components/SectionEditor.jsx';
 import BacktestPanel from './components/BacktestPanel.jsx';
 import ResultCard from './components/ResultCard.jsx';
 import MyLogicsLocker from './components/MyLogicsLocker.jsx';
-import SharedLogicsPanel from './components/SharedLogicsPanel.jsx';
+import OrderStrategyCard from './components/OrderStrategyCard.jsx';
 import { useVariables } from './hooks/useVariables.js';
 import { useMyLogics } from './hooks/useMyLogics.js';
-import { useSharedLogics } from './hooks/useSharedLogics.js';
 import { labApi } from './api.js';
 import { humanizeValidationError } from './errorMessages.js';
 import { logicToBuilderState } from './rulesetCodec.js';
@@ -18,6 +17,9 @@ import {
   DEFAULT_SYMBOL,
   DEFAULT_DAYS,
   DEFAULT_PARAMS,
+  DEFAULT_ENTRY_ORDER,
+  DEFAULT_TAKE_PROFIT_ORDER,
+  DEFAULT_STOP_LOSS_ORDER,
 } from './constants.js';
 
 const emptyCond = () => ({ lhs: '', op: '<=', rhs: '' });
@@ -81,6 +83,9 @@ export default function Builder({ isLoggedIn = false, userInfo = null }) {
   const [params, setParams] = useState(DEFAULT_PARAMS);
   const [sections, setSections] = useState(initialSections);
   const [errors, setErrors] = useState(initialErrors);
+  const [entryOrder, setEntryOrder] = useState(DEFAULT_ENTRY_ORDER);
+  const [takeProfitOrder, setTakeProfitOrder] = useState(DEFAULT_TAKE_PROFIT_ORDER);
+  const [stopLossOrder, setStopLossOrder] = useState(DEFAULT_STOP_LOSS_ORDER);
 
   // 백테스트 실행 상태
   const [running, setRunning] = useState(false);
@@ -106,14 +111,17 @@ export default function Builder({ isLoggedIn = false, userInfo = null }) {
   // 슬롯 가득 모달에서 "삭제 후 재시도"를 위해, 마지막으로 시도한 logic을 보관.
   const pendingSaveRef = useRef(null);
 
-  // 공유 로직 (SEED)
-  const shared = useSharedLogics();
-
   const handleBasic = (key, value) => {
     if (key === 'name') setName(value);
     else if (key === 'symbol') setSymbol(value);
     else if (key === 'days') setDays(value);
     else if (key === 'params') setParams(value);
+  };
+
+  const handleOrderStrategy = (which, next) => {
+    if (which === 'entry') setEntryOrder(next);
+    else if (which === 'takeProfit') setTakeProfitOrder(next);
+    else if (which === 'stopLoss') setStopLossOrder(next);
   };
 
   const updateCond = (sec, gi, ci, next) => {
@@ -211,6 +219,7 @@ export default function Builder({ isLoggedIn = false, userInfo = null }) {
   };
 
   // 룰셋 빌드: 현재 빌더 상태 → 백엔드 /backtest body의 ruleset 형태.
+  // entry_order/exit_order는 실거래 시 PC 엔진이 사용. 백테스트는 무시.
   const buildRuleset = () => ({
     name,
     symbol,
@@ -220,6 +229,9 @@ export default function Builder({ isLoggedIn = false, userInfo = null }) {
     entry: { groups: sections.entry.map((g) => g.map(condToStr)) },
     takeProfit: { groups: sections.takeProfit.map((g) => g.map(condToStr)) },
     stopLoss: { groups: sections.stopLoss.map((g) => g.map(condToStr)) },
+    entry_order: entryOrder,
+    takeProfit_order: takeProfitOrder,
+    stopLoss_order: stopLossOrder,
   });
 
   const handleRunBacktest = async () => {
@@ -271,6 +283,9 @@ export default function Builder({ isLoggedIn = false, userInfo = null }) {
     setDays(next.days);
     setParams(next.params);
     setSections(next.sections);
+    setEntryOrder(next.entryOrder);
+    setTakeProfitOrder(next.takeProfitOrder);
+    setStopLossOrder(next.stopLossOrder);
     setErrors(initialErrors());
     // 저장 시점에 함께 저장된 백테스트 결과 스냅샷이 있으면 그것도 복원.
     setResult(logic?.backtest || null);
@@ -294,6 +309,8 @@ export default function Builder({ isLoggedIn = false, userInfo = null }) {
     }
     handleLoadLogic(logic);
   };
+  // 공유 로직은 이제 커뮤니티 "로직 랭킹" 탭에서 직접 가져온다.
+  // (이전의 SharedLogicsPanel은 제거됨)
 
   // 변수 팔레트 클릭 → 마지막 포커스 칸 끝에 토큰 추가.
   const handleInsertToken = (token) => {
@@ -313,19 +330,19 @@ export default function Builder({ isLoggedIn = false, userInfo = null }) {
 
   return (
     <div className="space-y-5">
-      <SharedLogicsPanel
-        logics={shared.logics}
-        loading={shared.loading}
-        error={shared.error}
-        onApply={handleApplyShared}
-      />
-
       <BasicSettings
         name={name}
         symbol={symbol}
         days={days}
         params={params}
         onChange={handleBasic}
+      />
+
+      <OrderStrategyCard
+        entryOrder={entryOrder}
+        takeProfitOrder={takeProfitOrder}
+        stopLossOrder={stopLossOrder}
+        onChange={handleOrderStrategy}
       />
 
       <VariablePalette

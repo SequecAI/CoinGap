@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Bot, ShieldAlert, LogOut, User } from 'lucide-react';
+import { Bot, LogOut, User } from 'lucide-react';
 import { useAuth } from './hooks/useAuth.js';
 import { useMyLogics } from './hooks/useMyLogics.js';
 import { useApiKeys } from './hooks/useApiKeys.js';
 import { useEngine } from './hooks/useEngine.js';
 import { useRunSync } from './hooks/useRunSync.js';
 import { useTradeSync } from './hooks/useTradeSync.js';
+import { useRemoteControl } from './hooks/useRemoteControl.js';
 import LoginScreen from './components/LoginScreen.jsx';
 import LogicsPanel from './components/LogicsPanel.jsx';
 import ApiKeysCard from './components/ApiKeysCard.jsx';
@@ -40,6 +41,7 @@ function MainScreen({ userInfo, onLogout }) {
   const engine = useEngine();
   useRunSync(userInfo?.userId, engine.state, engine.context);
   useTradeSync(userInfo?.userId);
+  useRemoteControl(userInfo?.userId);
 
   const engineRunning = engine.state === 'running';
   const runningLogicId = engine.context?.logicId || null;
@@ -92,10 +94,6 @@ function MainScreen({ userInfo, onLogout }) {
           >
             <LogOut size={13} />
           </button>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 text-[11px] font-bold">
-            <ShieldAlert size={13} />
-            개발 미리보기
-          </div>
         </div>
       </header>
 
@@ -139,34 +137,8 @@ function MainScreen({ userInfo, onLogout }) {
           onClose={() => setModalLogic(null)}
           onConfirm={handleConfirmRun}
         />
-
-        <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <h2 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">
-            Phase C 진행 상황
-          </h2>
-          <ul className="space-y-1.5 text-xs font-bold">
-            <Milestone done label="C1 · Electron 골격" />
-            <Milestone done label="C2 · Google 로그인" />
-            <Milestone done label="C3 · 보관함에서 로직 불러오기" />
-            <Milestone done label="C4 · 업비트 API 키 + OS 키체인 저장" />
-            <Milestone done label="C5 · 페이퍼 트레이딩 실행 엔진" />
-            <Milestone label="C6 · 실거래 토글 + 안전장치" />
-            <Milestone label="C7 · 운영 상태 클라우드 동기화" />
-            <Milestone label="C8 · 모바일 운영 현황 화면" />
-            <Milestone label="C9 · 약관·면책 + 설치 패키지" />
-          </ul>
-        </section>
       </main>
     </div>
-  );
-}
-
-function Milestone({ label, done = false }) {
-  return (
-    <li className="flex items-center gap-2">
-      <span className={`w-4 h-4 rounded-full border-2 ${done ? 'bg-violet-600 border-violet-600' : 'border-slate-300'}`} />
-      <span className={done ? 'text-slate-800' : 'text-slate-400'}>{label}</span>
-    </li>
   );
 }
 

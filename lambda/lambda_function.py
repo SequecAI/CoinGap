@@ -210,7 +210,7 @@ def handle_post_actions(body):
     user_id = body.get("userId")
     title = body.get("title", "").strip()
 
-    VALID_TYPES = ("board", "indicator", "market_crypto", "market_stock")
+    VALID_TYPES = ("board", "indicator", "market_crypto", "market_stock", "logic")
     if post_type not in VALID_TYPES:
         return _response(400, {"error": f"type must be one of {VALID_TYPES}"})
     if not user_id:
@@ -250,6 +250,11 @@ def handle_post_actions(body):
         item["thresholds"] = body.get("thresholds", {})
         item["backtest"] = body.get("backtest") or {}
         item["indicatorMode"] = body.get("indicatorMode", "crypto")
+    elif post_type == "logic":
+        # Lab에서 만든 자동매매 룰셋. logic 필드에 룰셋 전체가 들어있다.
+        item["logic"] = body.get("logic") or {}
+        item["symbol"] = body.get("symbol", "")
+        item["backtest"] = body.get("backtest") or {}
 
     item = remove_empty_strings(item)
     community_table.put_item(Item=item)
@@ -260,7 +265,7 @@ def handle_post_actions(body):
 def handle_list_posts(params):
     """타입별 게시글 목록 조회 (최신순)."""
     post_type = (params or {}).get("type", "board")
-    VALID_TYPES = ("board", "indicator", "market_crypto", "market_stock")
+    VALID_TYPES = ("board", "indicator", "market_crypto", "market_stock", "logic")
     if post_type not in VALID_TYPES:
         return _response(400, {"error": f"type must be one of {VALID_TYPES}"})
 

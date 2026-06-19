@@ -15,15 +15,17 @@ const upbit = require('./upbit');
 
 const BACKEND_BASE = 'https://s8qnx3ch2k.execute-api.ap-northeast-2.amazonaws.com';
 const UPBIT_BASE = 'https://api.upbit.com';
-// CoinLeakSeeker step9와 동일하게 10초 주기로 평가.
-// 진행 중 분봉의 trade_price가 실시간 갱신되므로 의미 있음 (PRICE·DROP_NM·RSI 등이 흔들림).
-// Upbit rate limit 분당 600회, 매 10초 호출 8회 → 분당 48회로 여유.
-const TICK_MS = 10 * 1000;
+// 5초 주기 평가 — 진행 중 분봉의 trade_price 변화를 빠르게 반영.
+// Upbit rate limit 분당 600회 대비, 일반 tick은 분당 24회(분봉 2종)로 여유 만빵.
+const TICK_MS = 5 * 1000;
 const REQUIRED_CANDLES = 800;     // 백엔드 evaluate가 features 계산에 730 이상 권장
 const CANDLES_PER_CALL = 200;     // Upbit 단일 호출 최대치
 const FETCH_GAP_MS = 120;         // Upbit rate-limit 마진
 const INITIAL_CASH = 1_000_000;   // 모의투자 시드머니
 const FILL_DELAY_MS = 700;        // 시장가 주문 후 체결 확인 전 대기 시간
+// 지정가 주문 발주 후 타임아웃까지 우직하게 줄서기. step9와 동일한 60초.
+// 이 시간 동안은 매 tick마다 체결 상태만 확인하고 신호 재평가는 하지 않음.
+const LIMIT_TIMEOUT_MS = 60 * 1000;
 const MAX_CONSEC_ORDER_ERRORS = 3; // 연속 주문 실패 시 엔진 자동 정지
 
 class EngineService {
@@ -83,6 +85,9 @@ class EngineService {
       consecutiveOrderErrors: 0,
       tradingBlocked: false,  // 일일 손실 한도 초과 등으로 신규 진입 차단
       blockReason: null,
+      // 진행 중인 지정가 주문. 살아있는 동안 새 신호 평가를 멈추고 체결만 추적.
+      // { uuid, action, side, placedAt, rank, timeoutMs }
+      pendingOrder: null,
     };
     // 시작 시점에 KST 자정 경계 한 번 체크 (날짜가 바뀌었으면 누적 손실 리셋)
     this.maybeResetDailyLoss();
@@ -178,6 +183,12 @@ class EngineService {
     try {
       ctx.ticks += 1;
 
+      // 진행 중인 지정가 주문이 있으면 그것만 처리하고 신호 재평가는 건너뜀 (step9 패턴)
+      if (ctx.pendingOrder) {
+        await this.processPendingOrder();
+        return; // finally에서 scheduleNext + emit 처리
+      }
+
       // 첫 tick: 800개 초기화. 이후: latest 1개만 받아 캐시 슬라이딩.
       // 순차 호출(병렬 X) + FETCH_GAP_MS 간격으로 Upbit rate limit 회피.
       if (ctx.candleCache.target.length === 0) {
@@ -233,6 +244,41 @@ class EngineService {
       this.scheduleNext();
       this.emit('tick', this.publicContext());
     }
+  }
+
+  /**
+   * 원격 제어 명령 폴링 — 운영자 user가 외부에서 호출한 명령을 처리한다.
+   * 'stop' → engine.stop()
+   * { action: 'start', logicId, ... } → 보관함에서 logic 찾아 모의투자로 시작
+   *
+   * processControlCommand는 외부(useRunSync 또는 IPC)에서 호출한다.
+   * 현재는 EngineService에 userId를 보관하지 않으므로 renderer가 폴링·전달하는 모델.
+   */
+  async handleRemoteCommand(command) {
+    if (!command) return { ok: true };
+    if (command === 'stop' || command?.action === 'stop') {
+      if (this.state === 'running') {
+        this.stop();
+        return { ok: true, applied: 'stop' };
+      }
+      return { ok: true, applied: 'noop-already-stopped' };
+    }
+    if (command?.action === 'start') {
+      if (this.state === 'running') {
+        return { ok: false, error: '이미 다른 로직이 실행 중입니다.' };
+      }
+      const logic = command.logic;
+      if (!logic?.symbol) {
+        return { ok: false, error: '로직 정보가 부족합니다.' };
+      }
+      try {
+        await this.start(logic, { mode: 'paper', limits: null });
+        return { ok: true, applied: 'start' };
+      } catch (e) {
+        return { ok: false, error: e?.message || String(e) };
+      }
+    }
+    return { ok: false, error: '알 수 없는 명령입니다.' };
   }
 
   async applyAction(evalResult) {
@@ -340,6 +386,41 @@ class EngineService {
         const keys = keystore.loadKeysPlain();
         if (!keys) throw new Error('API 키가 저장되어 있지 않습니다.');
 
+        const strategy = ctx.logic.entry_order?.strategy || 'market';
+
+        if (strategy === 'limit_best') {
+          // step9 패턴: 매수 N호가에 지정가 발주 → pendingOrder에 보관 후 즉시 return.
+          // 이후 tick들에서 processPendingOrder가 체결/타임아웃 처리.
+          const rank = Math.min(3, Math.max(1, Number(ctx.logic.entry_order?.orderbook_rank) || 1));
+          const ob = await upbit.getOrderbook(ctx.symbol);
+          const bidPrice = ob?.orderbook_units?.[rank - 1]?.bid_price;
+          if (!bidPrice) throw new Error('호가창을 가져올 수 없습니다.');
+          const volume = (investKrw / bidPrice).toFixed(8);
+          const order = await upbit.placeOrder(keys.access, keys.secret, {
+            market: ctx.symbol,
+            side: 'bid',
+            ord_type: 'limit',
+            price: String(bidPrice),
+            volume,
+          });
+          const timeoutSec = Number(ctx.logic.entry_order?.timeout_sec) || 60;
+          ctx.pendingOrder = {
+            uuid: order.uuid,
+            action: 'ENTER',
+            side: 'bid',
+            placedAt: new Date().toISOString(),
+            rank,
+            intendedPrice: bidPrice,
+            intendedQty: parseFloat(volume),
+            intendedKrw: investKrw,
+            timeoutMs: Math.max(1000, timeoutSec * 1000),
+            fallbackToMarket: false, // 매수는 폴백 X — 안 잡히면 그냥 안 들어감
+          };
+          ctx.lastError = null;
+          return;
+        }
+
+        // 시장가 매수 (기존 즉시 체결 흐름)
         const order = await upbit.placeOrder(keys.access, keys.secret, {
           market: ctx.symbol,
           side: 'bid',
@@ -348,13 +429,13 @@ class EngineService {
         });
         await new Promise((r) => setTimeout(r, FILL_DELAY_MS));
         const filled = await upbit.getOrder(keys.access, keys.secret, order.uuid);
-
         const executedVolume = parseFloat(filled.executed_volume || '0');
         const paidFees = parseFloat(filled.paid_fee || '0');
-        const avgPrice = executedVolume > 0
-          ? (investKrw - paidFees) / executedVolume
-          : price;
-
+        if (executedVolume <= 0) {
+          ctx.lastError = '시장가 매수 미체결.';
+          return;
+        }
+        const avgPrice = (investKrw - paidFees) / executedVolume;
         ctx.position = {
           entryTime: timestamp,
           entryPrice: avgPrice,
@@ -367,7 +448,7 @@ class EngineService {
         const trade = {
           time: timestamp, action: 'ENTER', price: avgPrice, execPrice: avgPrice,
           qty: executedVolume, krw: investKrw, fees: paidFees,
-          orderUuid: order.uuid,
+          orderUuid: order.uuid, strategy: 'market',
         };
         ctx.trades.push(trade);
         this.emitTrade(trade);
@@ -381,6 +462,43 @@ class EngineService {
         const keys = keystore.loadKeysPlain();
         if (!keys) throw new Error('API 키가 저장되어 있지 않습니다.');
 
+        // 익절·손절 각자 strategy 사용
+        const exitOrderCfg = action === 'EXIT_TP'
+          ? ctx.logic.takeProfit_order
+          : ctx.logic.stopLoss_order;
+        const strategy = exitOrderCfg?.strategy || 'market';
+
+        if (strategy === 'limit_best') {
+          // 매도 N호가에 지정가 발주 → pendingOrder에 보관 후 즉시 return.
+          const rank = Math.min(3, Math.max(1, Number(exitOrderCfg?.orderbook_rank) || 1));
+          const ob = await upbit.getOrderbook(ctx.symbol);
+          const askPrice = ob?.orderbook_units?.[rank - 1]?.ask_price;
+          if (!askPrice) throw new Error('호가창을 가져올 수 없습니다.');
+          const order = await upbit.placeOrder(keys.access, keys.secret, {
+            market: ctx.symbol,
+            side: 'ask',
+            ord_type: 'limit',
+            price: String(askPrice),
+            volume: String(ctx.position.qty),
+          });
+          const timeoutSec = Number(exitOrderCfg?.timeout_sec)
+            || (action === 'EXIT_SL' ? 4 : 60);
+          ctx.pendingOrder = {
+            uuid: order.uuid,
+            action,
+            side: 'ask',
+            placedAt: new Date().toISOString(),
+            rank,
+            intendedPrice: askPrice,
+            intendedQty: ctx.position.qty,
+            timeoutMs: Math.max(1000, timeoutSec * 1000),
+            fallbackToMarket: true, // 매도는 타임아웃 시 시장가로 강제 청산
+          };
+          ctx.lastError = null;
+          return;
+        }
+
+        // 시장가 매도 (기존 즉시 체결 흐름)
         const order = await upbit.placeOrder(keys.access, keys.secret, {
           market: ctx.symbol,
           side: 'ask',
@@ -390,14 +508,24 @@ class EngineService {
         await new Promise((r) => setTimeout(r, FILL_DELAY_MS));
         const filled = await upbit.getOrder(keys.access, keys.secret, order.uuid);
 
-        // 시장가 매도: trades 배열의 funds 합이 매도 대금
+        const executedVolume = parseFloat(filled.executed_volume || '0');
+        if (executedVolume <= 0) {
+          ctx.lastError = '시장가 매도 미체결.';
+          return;
+        }
+        const orderUuid = order.uuid;
+
+        // 체결 trades 배열의 funds 합이 매도 대금
         const trades = filled.trades || [];
         const proceedsKrw = trades.reduce((s, t) => s + parseFloat(t.funds || '0'), 0);
         const fees = parseFloat(filled.paid_fee || '0');
         const netProceeds = proceedsKrw - fees;
-        const execPrice = ctx.position.qty > 0 ? proceedsKrw / ctx.position.qty : price;
-        const pnlKrw = netProceeds - ctx.position.investKrw - ctx.position.entryFees;
-        const pnlPct = ctx.position.investKrw > 0 ? (pnlKrw / ctx.position.investKrw) * 100 : 0;
+        const execPrice = executedVolume > 0 ? proceedsKrw / executedVolume : price;
+        // 부분 체결: 보유 수량 중 executedVolume만큼만 청산됨. 손익도 비례로 계산.
+        const partialEntryKrw = ctx.position.investKrw * (executedVolume / ctx.position.qty);
+        const partialEntryFees = ctx.position.entryFees * (executedVolume / ctx.position.qty);
+        const pnlKrw = netProceeds - partialEntryKrw - partialEntryFees;
+        const pnlPct = partialEntryKrw > 0 ? (pnlKrw / partialEntryKrw) * 100 : 0;
 
         if (pnlKrw < 0) this.dailyLoss += Math.abs(pnlKrw);
         if (limits.daily_loss_limit_krw > 0 && this.dailyLoss >= limits.daily_loss_limit_krw) {
@@ -407,18 +535,226 @@ class EngineService {
 
         const trade = {
           time: timestamp, action, price: execPrice, execPrice,
-          qty: ctx.position.qty, krw: proceedsKrw, fees, pnlKrw, pnlPct,
+          qty: executedVolume, krw: proceedsKrw, fees, pnlKrw, pnlPct,
           reason: action === 'EXIT_TP' ? 'TakeProfit' : 'StopLoss',
-          orderUuid: order.uuid,
+          orderUuid, strategy: 'market',
         };
         ctx.trades.push(trade);
         this.emitTrade(trade);
-        ctx.position = null;
+
+        // 전체 청산이면 position null. 부분 청산이면 잔여 수량/투입금 갱신.
+        if (executedVolume >= ctx.position.qty - 1e-8) {
+          ctx.position = null;
+        } else {
+          ctx.position = {
+            ...ctx.position,
+            qty: ctx.position.qty - executedVolume,
+            investKrw: ctx.position.investKrw - partialEntryKrw,
+            entryFees: ctx.position.entryFees - partialEntryFees,
+          };
+        }
         ctx.consecutiveOrderErrors = 0;
         await this.syncBalance();
       } catch (e) {
         this._handleOrderError('매도', e);
       }
+    }
+  }
+
+  /**
+   * 진행 중인 지정가 주문의 체결 상태를 확인하고 처리한다.
+   * - 'done' / 'cancel' (부분 체결 포함) → 체결분을 position에 반영하고 pending 해제
+   * - 'wait' + 타임아웃 미만 → 그대로 유지
+   * - 'wait' + 타임아웃 초과 → 강제 취소 + 부분 체결분 반영
+   */
+  async processPendingOrder() {
+    const ctx = this.context;
+    const po = ctx.pendingOrder;
+    const keys = keystore.loadKeysPlain();
+    if (!keys) {
+      ctx.lastError = '주문 추적 실패: API 키 없음';
+      ctx.pendingOrder = null;
+      return;
+    }
+    let status;
+    try {
+      status = await upbit.getOrder(keys.access, keys.secret, po.uuid);
+    } catch (e) {
+      ctx.lastError = `주문 조회 실패: ${e.message || e}`;
+      return; // 다음 tick에서 다시 시도
+    }
+    const state = status?.state;
+    const executedVolume = parseFloat(status?.executed_volume || '0');
+    const elapsed = Date.now() - new Date(po.placedAt).getTime();
+
+    if (state === 'done' || state === 'cancel') {
+      if (executedVolume > 0) this._applyFill(po, status);
+      ctx.pendingOrder = null;
+      return;
+    }
+
+    // 미체결 ('wait') — 타임아웃 검사
+    if (elapsed >= po.timeoutMs) {
+      try {
+        await upbit.cancelOrder(keys.access, keys.secret, po.uuid);
+      } catch { /* 이미 체결됐을 수도 — 무시 */ }
+      // 취소 직후 다시 조회 (부분 체결 잡기)
+      let remainingQty = po.intendedQty;
+      try {
+        const after = await upbit.getOrder(keys.access, keys.secret, po.uuid);
+        const afterVol = parseFloat(after?.executed_volume || '0');
+        if (afterVol > 0) {
+          this._applyFill(po, after);
+          remainingQty = Math.max(0, po.intendedQty - afterVol);
+        }
+      } catch {}
+      ctx.pendingOrder = null;
+
+      // 매도(익절·손절) 잔여분은 시장가로 강제 청산 — 손실 방치 방지
+      if (po.fallbackToMarket && po.side === 'ask' && remainingQty > 1e-8 && ctx.position) {
+        await this._fallbackMarketSell(po.action, remainingQty);
+      } else {
+        ctx.lastError = `${po.action === 'ENTER' ? '진입' : '청산'} 타임아웃 (${Math.round(po.timeoutMs / 1000)}초). 미체결분 취소.`;
+      }
+    }
+    // 그 외: 그대로 두고 다음 tick에서 다시 확인
+  }
+
+  /** 매도 지정가 타임아웃 시 잔여 수량을 시장가로 강제 청산. */
+  async _fallbackMarketSell(action, volume) {
+    const ctx = this.context;
+    const keys = keystore.loadKeysPlain();
+    if (!keys || !ctx.position) return;
+    try {
+      const order = await upbit.placeOrder(keys.access, keys.secret, {
+        market: ctx.symbol,
+        side: 'ask',
+        ord_type: 'market',
+        volume: String(volume),
+      });
+      await new Promise((r) => setTimeout(r, FILL_DELAY_MS));
+      const filled = await upbit.getOrder(keys.access, keys.secret, order.uuid);
+      const executedVolume = parseFloat(filled.executed_volume || '0');
+      if (executedVolume <= 0) {
+        ctx.lastError = '시장가 폴백 매도 미체결.';
+        return;
+      }
+      const trades = filled.trades || [];
+      const proceedsKrw = trades.reduce((s, t) => s + parseFloat(t.funds || '0'), 0);
+      const fees = parseFloat(filled.paid_fee || '0');
+      const netProceeds = proceedsKrw - fees;
+      const execPrice = proceedsKrw / executedVolume;
+      const positionQty = ctx.position.qty;
+      const partialEntryKrw = ctx.position.investKrw * (executedVolume / positionQty);
+      const partialEntryFees = ctx.position.entryFees * (executedVolume / positionQty);
+      const pnlKrw = netProceeds - partialEntryKrw - partialEntryFees;
+      const pnlPct = partialEntryKrw > 0 ? (pnlKrw / partialEntryKrw) * 100 : 0;
+      if (pnlKrw < 0) this.dailyLoss += Math.abs(pnlKrw);
+      const limits = ctx.limits;
+      if (limits && limits.daily_loss_limit_krw > 0 && this.dailyLoss >= limits.daily_loss_limit_krw) {
+        ctx.tradingBlocked = true;
+        ctx.blockReason = `일일 손실 한도 도달 (${Math.round(this.dailyLoss).toLocaleString('ko-KR')}원). 신규 진입 차단.`;
+      }
+      const ts = new Date().toISOString();
+      const trade = {
+        time: ts, action, price: execPrice, execPrice,
+        qty: executedVolume, krw: proceedsKrw, fees, pnlKrw, pnlPct,
+        reason: action === 'EXIT_TP' ? 'TakeProfit' : 'StopLoss',
+        orderUuid: order.uuid, strategy: 'market_fallback',
+      };
+      ctx.trades.push(trade);
+      this.emitTrade(trade);
+      ctx.lastError = `${action === 'EXIT_TP' ? '익절' : '손절'} 지정가 타임아웃 → 시장가 폴백 청산.`;
+      if (executedVolume >= ctx.position.qty - 1e-8) {
+        ctx.position = null;
+      } else {
+        ctx.position = {
+          ...ctx.position,
+          qty: ctx.position.qty - executedVolume,
+          investKrw: ctx.position.investKrw - partialEntryKrw,
+          entryFees: ctx.position.entryFees - partialEntryFees,
+        };
+      }
+      await this.syncBalance();
+    } catch (e) {
+      this._handleOrderError('시장가 폴백 매도', e);
+    }
+  }
+
+  /**
+   * 체결 결과(status)로부터 ENTER/EXIT_TP/EXIT_SL을 마무리한다.
+   * pending(po)의 action에 따라 분기.
+   */
+  _applyFill(po, status) {
+    const ctx = this.context;
+    const executedVolume = parseFloat(status.executed_volume || '0');
+    const paidFees = parseFloat(status.paid_fee || '0');
+    const orderUuid = po.uuid;
+    const ts = new Date().toISOString();
+
+    if (po.action === 'ENTER') {
+      // 매수 체결: 실 사용된 KRW = trades.funds 합 또는 (executed × price)
+      const trades = status.trades || [];
+      const usedKrw = trades.length > 0
+        ? trades.reduce((s, t) => s + parseFloat(t.funds || '0'), 0)
+        : executedVolume * parseFloat(status.price || '0');
+      const avgPrice = executedVolume > 0 ? usedKrw / executedVolume : Number(po.intendedPrice) || 0;
+
+      ctx.position = {
+        entryTime: ts,
+        entryPrice: avgPrice,
+        execEntryPrice: avgPrice,
+        qty: executedVolume,
+        investKrw: usedKrw,
+        entryFees: paidFees,
+        orderUuid,
+      };
+      const trade = {
+        time: ts, action: 'ENTER', price: avgPrice, execPrice: avgPrice,
+        qty: executedVolume, krw: usedKrw, fees: paidFees,
+        orderUuid, strategy: 'limit_best',
+      };
+      ctx.trades.push(trade);
+      this.emitTrade(trade);
+      ctx.consecutiveOrderErrors = 0;
+      this.syncBalance().catch(() => {});
+    } else if (po.action === 'EXIT_TP' || po.action === 'EXIT_SL') {
+      // 매도 체결
+      const trades = status.trades || [];
+      const proceedsKrw = trades.reduce((s, t) => s + parseFloat(t.funds || '0'), 0);
+      const netProceeds = proceedsKrw - paidFees;
+      const execPrice = executedVolume > 0 ? proceedsKrw / executedVolume : (ctx.position?.entryPrice || 0);
+      const positionQty = ctx.position?.qty || executedVolume;
+      const partialEntryKrw = (ctx.position?.investKrw || 0) * (executedVolume / positionQty);
+      const partialEntryFees = (ctx.position?.entryFees || 0) * (executedVolume / positionQty);
+      const pnlKrw = netProceeds - partialEntryKrw - partialEntryFees;
+      const pnlPct = partialEntryKrw > 0 ? (pnlKrw / partialEntryKrw) * 100 : 0;
+      if (pnlKrw < 0) this.dailyLoss += Math.abs(pnlKrw);
+      const limits = ctx.limits;
+      if (limits && limits.daily_loss_limit_krw > 0 && this.dailyLoss >= limits.daily_loss_limit_krw) {
+        ctx.tradingBlocked = true;
+        ctx.blockReason = `일일 손실 한도 도달 (${Math.round(this.dailyLoss).toLocaleString('ko-KR')}원). 신규 진입 차단.`;
+      }
+      const trade = {
+        time: ts, action: po.action, price: execPrice, execPrice,
+        qty: executedVolume, krw: proceedsKrw, fees: paidFees, pnlKrw, pnlPct,
+        reason: po.action === 'EXIT_TP' ? 'TakeProfit' : 'StopLoss',
+        orderUuid, strategy: 'limit_best',
+      };
+      ctx.trades.push(trade);
+      this.emitTrade(trade);
+      if (ctx.position && executedVolume >= ctx.position.qty - 1e-8) {
+        ctx.position = null;
+      } else if (ctx.position) {
+        ctx.position = {
+          ...ctx.position,
+          qty: ctx.position.qty - executedVolume,
+          investKrw: ctx.position.investKrw - partialEntryKrw,
+          entryFees: ctx.position.entryFees - partialEntryFees,
+        };
+      }
+      ctx.consecutiveOrderErrors = 0;
+      this.syncBalance().catch(() => {});
     }
   }
 
@@ -497,6 +833,7 @@ class EngineService {
       position: ctx.position
         ? { ...ctx.position, currentPrice: price ?? null }
         : null,
+      pendingOrder: ctx.pendingOrder,
       lastEval: ctx.lastEval,
       lastError: ctx.lastError,
       trades: ctx.trades.slice(-20),

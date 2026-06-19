@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Bot, ShieldAlert, ShieldCheck, Wallet, Activity, Clock,
-  TrendingUp, TrendingDown, AlertTriangle, WifiOff,
+  TrendingUp, TrendingDown, AlertTriangle, WifiOff, Square, Loader2,
 } from 'lucide-react';
 
 const SYMBOL_LABEL = {
@@ -16,7 +16,7 @@ const SYMBOL_LABEL = {
  *
  * 마지막 push 시각이 60초 넘으면 "연결 끊김" 경고 (PC가 종료되었거나 네트워크 단절).
  */
-export default function RunCard({ state }) {
+export default function RunCard({ state, onStop, stopBusy }) {
   const isLive = state.mode === 'live';
   const positive = (state.returnPct || 0) >= 0;
   const stale = isStale(state.updatedAt);
@@ -37,11 +37,24 @@ export default function RunCard({ state }) {
             </p>
           </div>
         </div>
-        <div className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 ${
-          isLive ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
-        }`}>
-          <ShieldAlert size={11} />
-          {isLive ? '실거래' : '모의투자'}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+            isLive ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
+          }`}>
+            <ShieldAlert size={11} />
+            {isLive ? '실거래' : '모의투자'}
+          </div>
+          {onStop && (
+            <button
+              onClick={onStop}
+              disabled={stopBusy}
+              title="PC 엔진 원격 중지"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 disabled:opacity-50 text-rose-700 text-xs font-bold transition-colors"
+            >
+              {stopBusy ? <Loader2 size={12} className="animate-spin" /> : <Square size={12} />}
+              중지
+            </button>
+          )}
         </div>
       </header>
 

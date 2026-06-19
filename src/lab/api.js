@@ -30,7 +30,7 @@ async function _delete(path) {
 
 export const labApi = {
   getVariables: () => _get('/variables'),
-  getSharedLogics: () => _get('/logics/shared'),
+  // 공유 로직은 이제 커뮤니티(/posts?type=logic)에서 받는다. /logics/shared 제거됨.
   validateExpr: (expr, section = 'exit') => _post('/validate', { expr, section }),
   runBacktest: (ruleset, days = 28) => _post('/backtest', { ruleset, days }),
 
@@ -59,5 +59,18 @@ export const labApi = {
     if (fromIso) qp.set('from', fromIso);
     if (toIso) qp.set('to', toIso);
     return _get(`/trades?${qp.toString()}`);
+  },
+
+  // 원격 제어 명령 발행 (PC 앱이 GET /runs/control로 폴링해 처리).
+  // command: 'stop' 또는 { action: 'start', logicId, logic }
+  setControlCommand: (userId, command) => {
+    return fetch(`${API_BASE}/runs/control`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, command }),
+    }).then(async (res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    });
   },
 };

@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft, Activity, RefreshCw, Loader2, AlertTriangle,
   LogIn, MonitorSmartphone,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth.js';
+import { useMyLogics } from '../lab/hooks/useMyLogics.js';
 import { useRunState } from './hooks/useRunState.js';
 import { useTradesHistory } from './hooks/useTradesHistory.js';
+import { labApi } from '../lab/api.js';
 import RunCard from './components/RunCard.jsx';
 import HistoryCard from './components/HistoryCard.jsx';
+import RemoteLocker from './components/RemoteLocker.jsx';
+import DesktopAppDownload from './components/DesktopAppDownload.jsx';
 
 /**
  * 운영 현황 페이지 (/live).
@@ -22,6 +26,52 @@ export default function LivePage() {
   const { isLoggedIn, userInfo } = useAuth();
   const { state, loading, error, reload } = useRunState(userInfo?.userId);
   const history = useTradesHistory(userInfo?.userId);
+  const myLogics = useMyLogics(userInfo?.userId);
+  const [remoteBusy, setRemoteBusy] = useState(null); // logicId | 'stop'
+  const [remoteMsg, setRemoteMsg] = useState(null);
+
+  // PC에서 운영 중인 로직이 있고 최근 1분 안에 업데이트가 있었는지
+  // (idle 상태 PC는 PUT을 안 보내므로 state 자체가 null. stale은 강제 종료 등 비정상 케이스)
+  const stateAgeMs = state?.updatedAt ? Date.now() - new Date(state.updatedAt).getTime() : Infinity;
+  const stateStale = stateAgeMs > 60_000;
+  // stale은 마치 state가 없는 것처럼 취급 — UI에서 운영 카드 자체를 숨긴다.
+  const liveState = state && !stateStale ? state : null;
+  const engineActive = !!liveState;
+  const runningLogicId = liveState?.logicId || null;
+
+  const handleStart = async (logic) => {
+    if (!userInfo) return;
+    setRemoteBusy(logic.logicId);
+    setRemoteMsg(null);
+    try {
+      await labApi.setControlCommand(userInfo.userId, {
+        action: 'start',
+        logicId: logic.logicId,
+        logic,
+      });
+      setRemoteMsg({ tone: 'emerald', text: `"${logic.name}" 시작 명령을 PC로 보냈습니다. 다음 폴링(최대 5초)에서 적용됩니다.` });
+      setTimeout(reload, 6000);
+    } catch (e) {
+      setRemoteMsg({ tone: 'rose', text: `시작 명령 실패: ${e?.message || e}` });
+    } finally {
+      setTimeout(() => setRemoteBusy(null), 1500);
+    }
+  };
+
+  const handleStop = async () => {
+    if (!userInfo) return;
+    setRemoteBusy('stop');
+    setRemoteMsg(null);
+    try {
+      await labApi.setControlCommand(userInfo.userId, 'stop');
+      setRemoteMsg({ tone: 'emerald', text: '중지 명령을 PC로 보냈습니다. 다음 폴링(최대 5초)에서 적용됩니다.' });
+      setTimeout(reload, 6000);
+    } catch (e) {
+      setRemoteMsg({ tone: 'rose', text: `중지 명령 실패: ${e?.message || e}` });
+    } finally {
+      setTimeout(() => setRemoteBusy(null), 1500);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pt-6 pb-20 px-4 text-left">
@@ -63,15 +113,37 @@ export default function LivePage() {
           <LoginRequired />
         ) : (
           <>
+            <DesktopAppDownload />
+
             {error ? (
               <ErrorView message={error} onRetry={reload} />
-            ) : state ? (
-              <RunCard state={state} />
+            ) : liveState ? (
+              <RunCard state={liveState} onStop={handleStop} stopBusy={remoteBusy === 'stop'} />
             ) : loading ? (
               <LoadingView />
             ) : (
               <EmptyState />
             )}
+
+            {remoteMsg && (
+              <div className={`p-3 rounded-2xl text-xs font-bold ${
+                remoteMsg.tone === 'emerald' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                'bg-rose-50 text-rose-700 border border-rose-100'
+              }`}>
+                {remoteMsg.text}
+              </div>
+            )}
+
+            <RemoteLocker
+              logics={myLogics.logics}
+              loading={myLogics.loading}
+              error={myLogics.error}
+              onReload={myLogics.reload}
+              onStart={handleStart}
+              runningLogicId={runningLogicId}
+              busyLogicId={typeof remoteBusy === 'string' && remoteBusy !== 'stop' ? remoteBusy : null}
+              pcConnected={engineActive}
+            />
 
             <HistoryCard
               preset={history.preset}

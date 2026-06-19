@@ -25,7 +25,6 @@ import evaluate as evaluate_mod
 from backtest_engine import run_backtest
 from features import ENTRY_VARS, EXIT_VARS, build_features
 from safe_eval import validate_condition
-from seed_logics import SEED_LOGIC
 from variables import OPERATORS, palette_for
 
 
@@ -68,10 +67,6 @@ def handle_variables():
         "exit": palette_for("exit"),
         "operators": OPERATORS,
     })
-
-
-def handle_shared_logics():
-    return _response(200, {"logics": [SEED_LOGIC]})
 
 
 def handle_validate(body):
@@ -166,6 +161,35 @@ def handle_delete_run_state(params):
         print(f"[ERR] delete_run_state: {e}\n{traceback.format_exc()}")
         return _response(500, {"error": f"delete failed: {e}"})
     return _response(200, {"ok": True})
+
+
+def handle_set_control(body):
+    """웹/모바일이 보내는 원격 명령. body: { userId, command: 'stop' | {action,logicId,...} }"""
+    user_id = body.get("userId")
+    command = body.get("command")
+    if not user_id:
+        return _response(400, {"error": "userId is required"})
+    if command is None:
+        return _response(400, {"error": "command is required"})
+    try:
+        runs_store.set_control_command(user_id, command)
+    except Exception as e:
+        print(f"[ERR] set_control: {e}\n{traceback.format_exc()}")
+        return _response(500, {"error": f"set failed: {e}"})
+    return _response(200, {"ok": True})
+
+
+def handle_pop_control(params):
+    """PC가 매 tick에 폴링. 명령이 있으면 반환하고 즉시 클리어."""
+    user_id = (params or {}).get("userId")
+    if not user_id:
+        return _response(400, {"error": "userId is required"})
+    try:
+        command = runs_store.pop_control_command(user_id)
+    except Exception as e:
+        print(f"[ERR] pop_control: {e}\n{traceback.format_exc()}")
+        return _response(500, {"error": f"pop failed: {e}"})
+    return _response(200, {"command": command})
 
 
 def handle_put_trade(body):
@@ -264,9 +288,6 @@ def lambda_handler(event, context):
         if method == "GET" and path.endswith("/variables"):
             return handle_variables()
 
-        if method == "GET" and path.endswith("/logics/shared"):
-            return handle_shared_logics()
-
         if method == "GET" and path.endswith("/logics/mine"):
             params = event.get("queryStringParameters") or {}
             return handle_list_my_logics(params)
@@ -298,6 +319,14 @@ def lambda_handler(event, context):
         if method == "DELETE" and path.endswith("/runs/state"):
             params = event.get("queryStringParameters") or {}
             return handle_delete_run_state(params)
+
+        if method == "PUT" and path.endswith("/runs/control"):
+            body = json.loads(event.get("body") or "{}", parse_float=decimal.Decimal)
+            return handle_set_control(body)
+
+        if method == "GET" and path.endswith("/runs/control"):
+            params = event.get("queryStringParameters") or {}
+            return handle_pop_control(params)
 
         if method == "POST" and path.endswith("/trades"):
             body = json.loads(event.get("body") or "{}", parse_float=decimal.Decimal)

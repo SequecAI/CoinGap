@@ -53,6 +53,7 @@ key.properties
 
 # Lab backend (lambda packaging artifacts)
 backtest-lambda.zip
+community-lambda.zip
 backend/backtest/.build/
 
 # Desktop (Electron) build artifacts

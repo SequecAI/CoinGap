@@ -106,4 +106,24 @@ async function getOrder(access, secret, uuid) {
   return res.json();
 }
 
-module.exports = { authHeader, getAccounts, placeOrder, getOrder };
+/** 주문 취소 (지정가 미체결분). */
+async function cancelOrder(access, secret, uuid) {
+  const params = { uuid };
+  const query = buildQueryString(params);
+  const res = await fetch(`${UPBIT_BASE}/v1/order?${query}`, {
+    method: 'DELETE',
+    headers: { Authorization: authHeader(access, secret, query) },
+  });
+  if (!res.ok) throw new Error(`업비트 주문 취소 실패: ${await _readError(res)}`);
+  return res.json();
+}
+
+/** 호가 조회 (인증 불필요). 첫 unit이 최우선 호가. */
+async function getOrderbook(market) {
+  const res = await fetch(`${UPBIT_BASE}/v1/orderbook?markets=${market}`);
+  if (!res.ok) throw new Error(`업비트 호가 조회 실패: ${await _readError(res)}`);
+  const arr = await res.json();
+  return Array.isArray(arr) ? arr[0] : null;
+}
+
+module.exports = { authHeader, getAccounts, placeOrder, getOrder, cancelOrder, getOrderbook };

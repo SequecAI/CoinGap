@@ -19,7 +19,6 @@ export default function LabPage() {
 
   const [checks, setChecks] = useState({
     variables: { status: 'pending', detail: '' },
-    sharedLogics: { status: 'pending', detail: '' },
     validate: { status: 'pending', detail: '' },
     backtest: { status: 'pending', detail: '' },
   });
@@ -31,7 +30,6 @@ export default function LabPage() {
   const runHealthChecks = async () => {
     setChecks({
       variables: { status: 'loading', detail: '' },
-      sharedLogics: { status: 'loading', detail: '' },
       validate: { status: 'loading', detail: '' },
       backtest: { status: 'loading', detail: '' },
     });
@@ -39,11 +37,6 @@ export default function LabPage() {
     await runOne('variables', async () => {
       const r = await labApi.getVariables();
       return `entry ${r.entry?.length ?? 0}개 그룹, exit ${r.exit?.length ?? 0}개 그룹, 연산자 ${r.operators?.length ?? 0}개`;
-    });
-
-    await runOne('sharedLogics', async () => {
-      const r = await labApi.getSharedLogics();
-      return `공유 로직 ${r.logics?.length ?? 0}개 (${r.logics?.[0]?.name ?? '없음'})`;
     });
 
     await runOne('validate', async () => {
@@ -133,7 +126,6 @@ export default function LabPage() {
 
           <div className="px-5 pb-5 space-y-2">
             <CheckRow label="GET /variables" check={checks.variables} />
-            <CheckRow label="GET /logics/shared" check={checks.sharedLogics} />
             <CheckRow label="POST /validate" check={checks.validate} />
             <CheckRow label="POST /backtest (28일)" check={checks.backtest} />
           </div>

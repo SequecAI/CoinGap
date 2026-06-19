@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useLocation, useNavigate, Routes, Route, Navigate } from 'react-router-dom';
+import { useLocation, useNavigate, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { SocialLogin } from '@capgo/capacitor-social-login';
 import {
@@ -18,7 +18,8 @@ import {
   Check,
   Menu,
   Shield,
-  Mail
+  Mail,
+  Beaker,
 } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { Analytics } from '@vercel/analytics/react';
@@ -267,6 +268,14 @@ function HeaderMenu({ isLoggedIn, onLogout, onDeleteAccount }) {
           {isLoggedIn && (
             <>
               <div className="border-t border-slate-100" />
+              <Link
+                to="/live"
+                onClick={closeAnd()}
+                className={`${itemBase} text-slate-700 hover:bg-slate-50`}
+              >
+                <Activity size={14} className="text-violet-500" />
+                운영 현황
+              </Link>
               <button
                 onClick={closeAnd(onLogout)}
                 className={`${itemBase} text-slate-700 hover:bg-slate-50`}
@@ -375,8 +384,6 @@ export default function App() {
 
   const isInAppBrowser = /kakaotalk|instagram|fban|fbav|line|naver|daum/i.test(navigator.userAgent);
 
-  const [dropThreshold, setDropThreshold] = useState(2.0);
-  const [zScoreThreshold, setZScoreThreshold] = useState(3.0);
   const [showInfo, setShowInfo] = useState(true);
   // Router hooks
   const location = useLocation();
@@ -474,8 +481,6 @@ export default function App() {
   const zScoreValue = (rateGap / 1.2).toFixed(1);
   const zNum = parseFloat(zScoreValue);
 
-  const currentDropMagnitude = Math.abs(momentum5m);
-  const currentZScoreMagnitude = Math.abs(zNum);
 
   const getZLabel = (val) => {
     if (val >= 3.0) return { text: 'Alt Undervalued', color: 'text-red-500', bg: 'bg-red-500/10' };
@@ -529,16 +534,16 @@ export default function App() {
             ) : appMode === 'crypto' ? (
               <>
                 {activeTab !== 'studio' && (
-                  <>
-                    <div className="flex flex-col gap-1 text-left">
-                      <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">DROP ALERT</label>
-                      <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-20 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all tabular-nums text-left" value={dropThreshold} onChange={(e) => setDropThreshold(Number(e.target.value))} />
-                    </div>
-                    <div className="flex flex-col gap-1 text-left">
-                      <label className="text-[10px] font-black text-orange-400 px-1 uppercase tracking-tighter">Z-Score Alert</label>
-                      <input type="number" step="0.1" className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 w-full sm:w-20 font-bold outline-none focus:ring-2 focus:ring-orange-500 transition-all tabular-nums text-left" value={zScoreThreshold} onChange={(e) => setZScoreThreshold(Number(e.target.value))} />
-                    </div>
-                  </>
+                  <div className="flex flex-col gap-1 text-left">
+                    <label className="text-[10px] font-black text-violet-600 px-1 uppercase tracking-tighter">자동매매 Lab</label>
+                    <Link
+                      to="/lab"
+                      className="flex items-center justify-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl p-2.5 w-full sm:w-auto font-bold text-xs uppercase tracking-tight transition-all shadow-lg shadow-violet-200"
+                    >
+                      <Beaker size={14} />
+                      Lab 열기
+                    </Link>
+                  </div>
                 )}
                 <div className="relative" ref={coinSearchRef}>
                   <div className="flex flex-col gap-1 text-left">
@@ -842,29 +847,6 @@ export default function App() {
             kospiPrice={stockData.kospiPrice} kospiChange={stockData.kospiChange} kospiDirection={stockData.kospiDirection}
             kosdaqPrice={stockData.kosdaqPrice} kosdaqChange={stockData.kosdaqChange} kosdaqDirection={stockData.kosdaqDirection}
           />
-        )}
-
-        {/* 알림 메시지 - 코인 모드에서만 표시 */}
-        {appMode === 'crypto' && appMode !== 'community' && (currentDropMagnitude >= dropThreshold || currentZScoreMagnitude >= zScoreThreshold) && (
-          <div className="bg-red-600 text-white p-5 rounded-3xl flex items-center justify-between animate-pulse shadow-xl shadow-red-200 border-2 border-red-500 font-sans">
-            <div className="flex items-center gap-4 text-left">
-              <Bell size={24} className="shrink-0" />
-              <div className="text-left font-sans space-y-1">
-                <p className="font-black text-lg uppercase leading-none tracking-tighter">Market Alert!</p>
-                {currentDropMagnitude >= dropThreshold && (
-                  <p className="text-xs font-bold opacity-90">
-                    Momentum: <span className="tabular-nums">{momentum5m.toFixed(2)}%</span> (Threshold Exceeded)
-                  </p>
-                )}
-                {currentZScoreMagnitude >= zScoreThreshold && (
-                  <p className="text-xs font-bold opacity-90">
-                    Z-Score: <span className="tabular-nums">{zScoreValue}</span> (Price Distortion Detected)
-                  </p>
-                )}
-              </div>
-            </div>
-            <ChevronRight size={24} />
-          </div>
         )}
 
         {/* 정보성 섹션 — board/community에선 숨김 */}

@@ -1,0 +1,65 @@
+{
+  "name": "coingap-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CoinGap PC 앱 — 사용자 로직을 로컬에서 실행하는 자동매매 에이전트.",
+  "author": "Sequence AI <adminsequenceai@gmail.com>",
+  "main": "electron/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev:vite": "vite",
+    "dev:electron": "wait-on tcp:5174 && cross-env ELECTRON_RENDERER_URL=http://localhost:5174 electron .",
+    "dev": "concurrently -k -n VITE,ELECTRON -c blue,magenta \"npm:dev:vite\" \"npm:dev:electron\"",
+    "build:renderer": "vite build",
+    "build": "npm run build:renderer && electron-builder",
+    "build:dir": "npm run build:renderer && electron-builder --dir"
+  },
+  "dependencies": {
+    "lucide-react": "^0.475.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "vite": "^6.0.0",
+    "wait-on": "^8.0.1",
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/vite": "^4.0.0"
+  },
+  "build": {
+    "appId": "com.sequenceai.coingap-desktop",
+    "productName": "CoinGap Desktop",
+    "copyright": "Copyright © 2026 Sequence AI",
+    "directories": {
+      "output": "dist-electron",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": ".env",
+        "to": ".env"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CoinGap Desktop"
+    }
+  }
+}

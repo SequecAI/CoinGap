@@ -18,7 +18,20 @@ Z_WINDOW = 720  # 분 (12시간)
 DEFAULT_DAYS = 365  # 백테스트 기본 기간
 
 # 백테스트에서 제공하는 시장 변수 (진입/익절/손절 공통)
-MARKET_VARS = ["PRICE", "Z_SCORE", "RATIO", "DROP_3M", "DROP_5M", "RSI_14", "VOLUME"]
+MARKET_VARS = [
+    # 가격·기본
+    "PRICE", "Z_SCORE", "RATIO", "VOLUME",
+    # 가격 변동률 (시간대별 하락/상승)
+    "DROP_1M", "DROP_3M", "DROP_5M", "DROP_10M", "DROP_30M", "DROP_60M",
+    "RISE_3M", "RISE_5M", "RISE_10M",
+    "RSI_14",
+    # 이동평균 (Moving Average / Exponential MA)
+    "MA_20", "MA_60", "MA_240", "EMA_12", "EMA_26", "PRICE_VS_MA60",
+    # MACD
+    "MACD", "MACD_SIGNAL", "MACD_HIST",
+    # Bollinger Bands
+    "BB_UPPER", "BB_LOWER", "BB_WIDTH", "BB_PCT",
+]
 # 보유 중에만 의미가 있는 포지션 변수 (익절/손절 전용)
 POSITION_VARS = ["PNL_PCT", "HOLD_MIN", "ENTRY_PRICE"]
 
@@ -54,11 +67,43 @@ def compute_features(df, *, trim=True):
     sigma = out["RATIO"].rolling(Z_WINDOW).std().shift(1)
     out["Z_SCORE"] = ((out["RATIO"] - mu) / sigma).where(sigma > 0, 0.0)
 
-    # 하락률 % (현재 종가 / N분 전 종가 - 1)
+    # 하락률 % (현재 종가 / N분 전 종가 - 1).
+    # 양수면 상승, 음수면 하락. RISE_*는 음수 부호를 뒤집어 가독성 위해 별도 제공.
+    out["DROP_1M"] = (df["close"] / df["close"].shift(1) - 1.0) * 100.0
     out["DROP_3M"] = (df["close"] / df["close"].shift(3) - 1.0) * 100.0
     out["DROP_5M"] = (df["close"] / df["close"].shift(5) - 1.0) * 100.0
+    out["DROP_10M"] = (df["close"] / df["close"].shift(10) - 1.0) * 100.0
+    out["DROP_30M"] = (df["close"] / df["close"].shift(30) - 1.0) * 100.0
+    out["DROP_60M"] = (df["close"] / df["close"].shift(60) - 1.0) * 100.0
+    out["RISE_3M"] = -out["DROP_3M"]
+    out["RISE_5M"] = -out["DROP_5M"]
+    out["RISE_10M"] = -out["DROP_10M"]
 
     out["RSI_14"] = _rsi(df["close"], 14)
+
+    # 이동평균. EMA는 adjust=False로 워밍업 첫 봉부터 값이 나옴 (재귀형).
+    out["MA_20"] = df["close"].rolling(20).mean()
+    out["MA_60"] = df["close"].rolling(60).mean()
+    out["MA_240"] = df["close"].rolling(240).mean()
+    out["EMA_12"] = df["close"].ewm(span=12, adjust=False).mean()
+    out["EMA_26"] = df["close"].ewm(span=26, adjust=False).mean()
+    # 현재가가 MA_60 대비 몇 % 위/아래인지 (+는 위, -는 아래)
+    out["PRICE_VS_MA60"] = (out["PRICE"] / out["MA_60"] - 1.0) * 100.0
+
+    # MACD: 12EMA - 26EMA, Signal=9EMA of MACD, Hist=MACD-Signal
+    out["MACD"] = out["EMA_12"] - out["EMA_26"]
+    out["MACD_SIGNAL"] = out["MACD"].ewm(span=9, adjust=False).mean()
+    out["MACD_HIST"] = out["MACD"] - out["MACD_SIGNAL"]
+
+    # Bollinger Bands (20 기간, ±2 표준편차)
+    std_20 = df["close"].rolling(20).std()
+    out["BB_UPPER"] = out["MA_20"] + 2.0 * std_20
+    out["BB_LOWER"] = out["MA_20"] - 2.0 * std_20
+    # 밴드 폭 (% — 평균 대비). 추세 확장/수축 감지
+    out["BB_WIDTH"] = ((out["BB_UPPER"] - out["BB_LOWER"]) / out["MA_20"] * 100.0)
+    # 밴드 내 위치 0~1 (0=하단, 1=상단). 폭이 0이면 0.5로 고정
+    band_width = out["BB_UPPER"] - out["BB_LOWER"]
+    out["BB_PCT"] = ((out["PRICE"] - out["BB_LOWER"]) / band_width).where(band_width > 0, 0.5)
 
     if trim:
         out = out.iloc[Z_WINDOW:]

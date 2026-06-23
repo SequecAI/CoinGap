@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Beaker, CheckCircle2, XCircle, Loader2, User, LogIn } from 'lucide-react';
+import { ArrowLeft, Beaker, CheckCircle2, XCircle, Loader2, Activity } from 'lucide-react';
 import { labApi } from './api.js';
 import Builder from './Builder.jsx';
 import { useAuth } from '../hooks/useAuth.js';
@@ -90,13 +90,20 @@ export default function LabPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <AuthBadge isLoggedIn={isLoggedIn} userInfo={userInfo} />
+            <Link
+              to="/live"
+              title="운영 현황 — PC 엔진 모니터링"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-colors"
+            >
+              <Activity size={14} />
+              운영 현황으로
+            </Link>
             <Link
               to="/"
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-colors"
             >
               <ArrowLeft size={14} />
-              coingap으로
+              자산 지표 모니터로
             </Link>
           </div>
         </div>
@@ -137,38 +144,6 @@ export default function LabPage() {
           </p>
         </footer>
       </div>
-    </div>
-  );
-}
-
-/**
- * Lab 헤더 우측에 표시되는 로그인 상태 칩.
- * - 로그인 시: 프로필 아이콘 + 닉네임 (이메일 툴팁)
- * - 비로그인 시: coingap 메인으로 로그인하라는 안내 링크
- *
- * Lab 자체에는 GoogleLogin UI를 두지 않는다 — coingap과 동일 origin이라
- * localStorage 세션을 공유하므로 메인에서 한 번만 로그인하면 Lab도 자동 인식.
- */
-function AuthBadge({ isLoggedIn, userInfo }) {
-  if (!isLoggedIn) {
-    return (
-      <Link
-        to="/"
-        title="coingap 메인에서 로그인하면 Lab에서도 자동으로 인식됩니다"
-        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-bold transition-colors"
-      >
-        <LogIn size={14} />
-        <span className="hidden sm:inline">로그인 필요</span>
-      </Link>
-    );
-  }
-  return (
-    <div
-      title={userInfo?.email || ''}
-      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold"
-    >
-      <User size={14} />
-      <span className="max-w-[120px] truncate">{userInfo?.nickname || '사용자'}</span>
     </div>
   );
 }

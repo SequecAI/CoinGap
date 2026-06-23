@@ -1016,9 +1016,46 @@ export default function CommunityTab({ isLoggedIn, userInfo, subTab, onSubTabCha
 function LogicShareCard({ post, rank, score, userInfo, onDelete }) {
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState(null);
+  const [expanded, setExpanded] = useState(false);
   const bt = post.backtest || post.logic?.backtest;
   // 랭킹은 커뮤니티 자산이므로 관리자만 삭제 가능 (본인도 삭제 X).
   const isAdmin = userInfo?.email === 'adminsequenceai@gmail.com';
+  const periodText = formatLogicPeriod(post);
+  const symbolLabel = (post.symbol || post.logic?.symbol || '').replace('KRW-', '') || '—';
+
+  // 접힌 상태: 한 줄 요약. 클릭하면 펼침.
+  if (!expanded) {
+    const positive = (bt?.total_return_pct ?? 0) >= 0;
+    return (
+      <div onClick={() => setExpanded(true)}
+        className="cursor-pointer flex items-center justify-between gap-2 p-3 bg-white border border-slate-100 rounded-xl hover:border-violet-300 hover:bg-violet-50/40 transition-all shadow-sm">
+        <div className="flex items-center gap-2.5 min-w-0">
+          {rank != null && (
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${
+              rank === 1 ? 'bg-amber-400 text-white' :
+              rank === 2 ? 'bg-slate-400 text-white' :
+              rank === 3 ? 'bg-amber-700 text-white' :
+              'bg-slate-200 text-slate-600'
+            }`}>{rank}</div>
+          )}
+          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0 tabular-nums">{symbolLabel}</span>
+          <span className="text-xs font-black text-slate-500 truncate shrink-0 max-w-[100px]">{renderNickname(post.nickname)}</span>
+          <h4 className="text-sm font-black text-slate-800 truncate">{post.title || '이름 없음'}</h4>
+        </div>
+        <div className="flex items-center gap-2.5 shrink-0 pl-2">
+          {bt?.total_return_pct != null && (
+            <span className={`text-[11px] font-black tabular-nums ${positive ? 'text-emerald-600' : 'text-rose-600'}`}>
+              {positive ? '+' : ''}{bt.total_return_pct}%
+            </span>
+          )}
+          {score != null && (
+            <span className="text-sm font-black text-violet-600 tabular-nums">{score.toLocaleString()}점</span>
+          )}
+          <ChevronDown size={14} className="text-slate-400" />
+        </div>
+      </div>
+    );
+  }
 
   const handleImport = async () => {
     if (!userInfo) { setImportMsg({ tone: 'rose', text: '먼저 로그인해주세요.' }); return; }
@@ -1042,38 +1079,45 @@ function LogicShareCard({ post, rank, score, userInfo, onDelete }) {
   };
 
   return (
-    <div className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${rank === 1 ? 'border-amber-300 ring-2 ring-amber-100' : 'border-slate-100'}`}>
+    <div
+      onClick={() => setExpanded(false)}
+      className={`cursor-pointer bg-white rounded-2xl border shadow-sm overflow-hidden ${rank === 1 ? 'border-amber-300 ring-2 ring-amber-100' : 'border-slate-100'}`}
+    >
       {rank != null && (
         <div className={`px-4 sm:px-5 py-2 flex items-center justify-between gap-2 ${rank === 1 ? 'bg-amber-50' : rank <= 3 ? 'bg-slate-50' : 'bg-white'}`}>
-          <div className="flex items-center gap-2">
-            <span className={`text-xs font-black tabular-nums ${rank === 1 ? 'text-amber-700' : rank <= 3 ? 'text-slate-700' : 'text-slate-400'}`}>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className={`text-xs font-black tabular-nums shrink-0 ${rank === 1 ? 'text-amber-700' : rank <= 3 ? 'text-slate-700' : 'text-slate-400'}`}>
               {rank === 1 && '🏆 '}{rank}위
             </span>
             {score != null && (
-              <span className="text-[10px] font-bold text-slate-400 tabular-nums">
+              <span className="text-[10px] font-bold text-slate-400 tabular-nums shrink-0">
                 점수 {score >= 0 ? '+' : ''}{score}
               </span>
             )}
+            {periodText && (
+              <span className="text-[10px] font-bold text-slate-400 truncate">
+                · 백테스트 {periodText}
+              </span>
+            )}
           </div>
+          <ChevronUp size={14} className="text-slate-400 shrink-0" />
         </div>
       )}
       <div className="p-4 sm:p-5 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            {post.profileImage ? (
-              <img src={post.profileImage} alt="" className="w-7 h-7 rounded-full" />
-            ) : (
-              <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center">
-                <User size={14} className="text-slate-500" />
-              </div>
-            )}
             <div className="min-w-0">
               <p className="text-xs font-black text-slate-800 truncate">{renderNickname(post.nickname)}</p>
               <p className="text-[10px] text-slate-400 font-bold">{timeAgo(post.createdAt)}</p>
             </div>
           </div>
           {isAdmin && onDelete && (
-            <button onClick={() => onDelete(post)} className="text-[10px] text-rose-400 hover:text-rose-600 font-bold">삭제(관리자)</button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(post); }}
+              className="text-[10px] text-rose-400 hover:text-rose-600 font-bold"
+            >
+              삭제(관리자)
+            </button>
           )}
         </div>
 
@@ -1098,8 +1142,11 @@ function LogicShareCard({ post, rank, score, userInfo, onDelete }) {
           </div>
         )}
 
-        <button onClick={handleImport} disabled={importing}
-          className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-violet-50 hover:bg-violet-100 disabled:opacity-50 text-violet-700 text-xs font-bold transition-colors">
+        <button
+          onClick={(e) => { e.stopPropagation(); handleImport(); }}
+          disabled={importing}
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-violet-50 hover:bg-violet-100 disabled:opacity-50 text-violet-700 text-xs font-bold transition-colors"
+        >
           {importing ? <RefreshCcw size={13} className="animate-spin" /> : <Download size={13} />}
           {importing ? '가져오는 중...' : '내 보관함에 가져오기'}
         </button>
@@ -1131,6 +1178,20 @@ function LogicBtStat({ label, value, positive, tone }) {
 function fmtLogicPct(v) {
   if (typeof v !== 'number') return '—';
   return `${v >= 0 ? '+' : ''}${v}%`;
+}
+
+// 백테스트 기간 표시: 일수 + (시작~끝). 둘 다 있으면 "28일 (05.21~06.17)" 형태.
+function formatLogicPeriod(post) {
+  const days = post?.logic?.days;
+  const bt = post?.backtest || post?.logic?.backtest;
+  const toShort = (iso) => (iso ? String(iso).slice(5, 10).replace(/-/g, '.') : '');
+  const start = bt?.period_start ? toShort(bt.period_start) : '';
+  const end = bt?.period_end ? toShort(bt.period_end) : '';
+  const range = start && end ? `${start}~${end}` : '';
+  if (days && range) return `${days}일 (${range})`;
+  if (days) return `${days}일`;
+  if (range) return range;
+  return null;
 }
 
 // ── 로직 공유 폼 ──

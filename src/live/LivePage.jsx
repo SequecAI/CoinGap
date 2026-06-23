@@ -112,7 +112,7 @@ export default function LivePage() {
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-colors"
             >
               <ArrowLeft size={14} />
-              coingap으로
+              자산 지표 모니터로
             </Link>
           </div>
         </div>

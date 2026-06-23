@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft, Activity, RefreshCw, Loader2, AlertTriangle,
-  LogIn, MonitorSmartphone,
+  LogIn, MonitorSmartphone, Beaker,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth.js';
 import { useMyLogics } from '../lab/hooks/useMyLogics.js';
@@ -13,6 +13,7 @@ import RunCard from './components/RunCard.jsx';
 import HistoryCard from './components/HistoryCard.jsx';
 import RemoteLocker from './components/RemoteLocker.jsx';
 import DesktopAppDownload from './components/DesktopAppDownload.jsx';
+import StoreLinks from '../components/StoreLinks.jsx';
 
 /**
  * 운영 현황 페이지 (/live).
@@ -100,11 +101,19 @@ export default function LivePage() {
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             </button>
             <Link
+              to="/lab"
+              title="Lab — 로직 빌더/보관함"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-colors"
+            >
+              <Beaker size={14} />
+              Lab으로
+            </Link>
+            <Link
               to="/"
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-colors"
             >
               <ArrowLeft size={14} />
-              coingap으로
+              자산 지표 모니터로
             </Link>
           </div>
         </div>
@@ -162,10 +171,11 @@ export default function LivePage() {
           </>
         )}
 
-        <footer className="mt-12 pt-8 border-t border-slate-200 text-center">
+        <footer className="mt-12 pt-8 border-t border-slate-200 text-center space-y-2">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
             © 2026 Asset Indicator Monitor — Live Preview
           </p>
+          <StoreLinks />
         </footer>
       </div>
     </div>

@@ -152,18 +152,24 @@ function TradesList({ trades }) {
 }
 
 function TradeRow({ trade }) {
+  // 라벨은 손익 부호 기준 (신호 종류는 hover 툴팁으로).
   const enter = trade.action === 'ENTER';
-  const icon = enter ? <TrendingDown size={12} /> : <TrendingUp size={12} />;
+  const pnl = Number(trade.pnlPct);
+  const profitable = !enter && isFinite(pnl) && pnl >= 0;
+  const icon = enter ? <TrendingDown size={12} /> :
+    profitable ? <TrendingUp size={12} /> : <TrendingDown size={12} />;
   const tone = enter
     ? 'text-blue-600 bg-blue-50 border-blue-100'
-    : trade.action === 'EXIT_TP'
+    : profitable
     ? 'text-emerald-600 bg-emerald-50 border-emerald-100'
     : 'text-rose-600 bg-rose-50 border-rose-100';
-  const label = enter ? '진입' : trade.action === 'EXIT_TP' ? '익절' : '손절';
-  const pnl = Number(trade.pnlPct);
+  const label = enter ? '진입' : profitable ? '익절' : '손절';
+  const tooltip = !enter
+    ? (trade.action === 'EXIT_TP' ? '익절 신호로 청산' : trade.action === 'EXIT_SL' ? '손절 신호로 청산' : '')
+    : '진입';
   return (
     <li className="flex items-center gap-2 text-[11px] font-medium tabular-nums px-2 py-1.5 rounded hover:bg-slate-50">
-      <span className={`px-1.5 py-0.5 rounded border ${tone} font-bold flex items-center gap-1 shrink-0`}>
+      <span title={tooltip} className={`px-1.5 py-0.5 rounded border ${tone} font-bold flex items-center gap-1 shrink-0`}>
         {icon}{label}
       </span>
       <span className="text-slate-500 shrink-0">{fmtDateTime(trade.time)}</span>

@@ -34,6 +34,7 @@ import StockCustomViewTab from './tabs/StockCustomViewTab';
 import IndicatorStudioTab from './tabs/IndicatorStudioTab';
 import StockEditorTab from './tabs/StockEditorTab';
 import CommunityTab from './tabs/CommunityTab';
+import StoreLinks from './components/StoreLinks.jsx';
 import { initAdMob, showBanner } from './utils/admob';
 
 const GOOGLE_WEB_CLIENT_ID = '874558352527-jpjfa7i23vrk9l30jq1od5vg93ko9g99.apps.googleusercontent.com';
@@ -1076,6 +1077,7 @@ export default function App() {
           <div className="flex justify-center gap-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
             <span>Contact: adminsequenceai@gmail.com</span>
           </div>
+          <StoreLinks />
           <div className="text-[10px] text-slate-300 leading-relaxed max-w-lg mx-auto tabular-nums text-center italic font-medium font-sans">
             <p>본 서비스는 정보 제공을 위한 모니터링 도구입니다. 모든 투자 책임은 본인에게 있습니다.</p>
             <p className="mt-2 font-black text-slate-400 tracking-tighter not-italic uppercase tracking-widest text-center">© 2026 Asset Indicator Monitor. BY SequenceAI.</p>

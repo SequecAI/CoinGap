@@ -187,18 +187,27 @@ function TradesBlock({ trades }) {
 }
 
 function TradeRow({ trade }) {
+  // 라벨은 손익 부호 기준. 신호 종류는 작은 회색 서브 라벨.
   const enter = trade.action === 'ENTER';
-  const icon = enter ? <TrendingDown size={12} /> : <TrendingUp size={12} />;
+  const profitable = !enter && Number(trade.pnlPct) >= 0;
+  const icon = enter ? <TrendingDown size={12} /> :
+    profitable ? <TrendingUp size={12} /> : <TrendingDown size={12} />;
   const tone = enter ? 'text-blue-600 bg-blue-50 border-blue-100' :
-    trade.action === 'EXIT_TP' ? 'text-emerald-600 bg-emerald-50 border-emerald-100' :
+    profitable ? 'text-emerald-600 bg-emerald-50 border-emerald-100' :
     'text-rose-600 bg-rose-50 border-rose-100';
-  const label = enter ? '진입' : trade.action === 'EXIT_TP' ? '익절' : '손절';
+  const label = enter ? '진입' : profitable ? '익절' : '손절';
+  const reasonHint = !enter
+    ? (trade.action === 'EXIT_TP' ? '익절 신호' : trade.action === 'EXIT_SL' ? '손절 신호' : null)
+    : null;
   const pnl = trade.pnlPct != null ? fmtPct(trade.pnlPct) : null;
   return (
     <li className="flex items-center gap-2 text-[11px] font-medium tabular-nums">
       <span className={`px-1.5 py-0.5 rounded border ${tone} font-bold flex items-center gap-1`}>
         {icon}{label}
       </span>
+      {reasonHint && (
+        <span className="text-[10px] text-slate-400 font-bold">{reasonHint}</span>
+      )}
       <span className="text-slate-500">{fmtTime(trade.time)}</span>
       <span className="text-slate-700 font-bold">{fmtKrw(trade.price)}</span>
       {pnl && (

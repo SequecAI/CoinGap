@@ -13,6 +13,7 @@ import RunCard from './components/RunCard.jsx';
 import HistoryCard from './components/HistoryCard.jsx';
 import RemoteLocker from './components/RemoteLocker.jsx';
 import DesktopAppDownload from './components/DesktopAppDownload.jsx';
+import StoreLinks from '../components/StoreLinks.jsx';
 
 /**
  * 운영 현황 페이지 (/live).
@@ -170,10 +171,11 @@ export default function LivePage() {
           </>
         )}
 
-        <footer className="mt-12 pt-8 border-t border-slate-200 text-center">
+        <footer className="mt-12 pt-8 border-t border-slate-200 text-center space-y-2">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
             © 2026 Asset Indicator Monitor — Live Preview
           </p>
+          <StoreLinks />
         </footer>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { ArrowLeft, Beaker, CheckCircle2, XCircle, Loader2, Activity } from 'luc
 import { labApi } from './api.js';
 import Builder from './Builder.jsx';
 import { useAuth } from '../hooks/useAuth.js';
+import StoreLinks from '../components/StoreLinks.jsx';
 
 /**
  * Lab 메인 페이지 (Phase A 시작점, 자동매매 백테스트 빌더 진입점).
@@ -138,10 +139,11 @@ export default function LabPage() {
           </div>
         </details>
 
-        <footer className="mt-12 pt-8 border-t border-slate-200 text-center">
+        <footer className="mt-12 pt-8 border-t border-slate-200 text-center space-y-2">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
             © 2026 Asset Indicator Monitor — Lab Preview
           </p>
+          <StoreLinks />
         </footer>
       </div>
     </div>

@@ -22,13 +22,21 @@ _table = _dynamodb.Table("LabRuns")
 
 
 def put_state(user_id: str, state: dict) -> dict:
+    """PC 엔진이 매 tick 호출. 항목을 통째로 덮어쓰되, 웹/모바일이 따로
+    걸어둔 controlCommand는 보존해야 한다 (안 그러면 중지 명령이 사라짐)."""
     if not isinstance(state, dict):
         state = {}
+    existing = _table.get_item(Key={"userId": user_id}).get("Item") or {}
     item = {
         **state,
         "userId": user_id,
         "updatedAt": datetime.now(timezone.utc).isoformat(),
     }
+    # 보존: 클라이언트가 PUT 사이에 걸어둔 원격 명령
+    if "controlCommand" in existing:
+        item["controlCommand"] = existing["controlCommand"]
+    if "controlSetAt" in existing:
+        item["controlSetAt"] = existing["controlSetAt"]
     _table.put_item(Item=item)
     return {"ok": True}
 

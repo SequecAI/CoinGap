@@ -14,6 +14,7 @@ import HistoryCard from './components/HistoryCard.jsx';
 import RemoteLocker from './components/RemoteLocker.jsx';
 import DesktopAppDownload from './components/DesktopAppDownload.jsx';
 import StoreLinks from '../components/StoreLinks.jsx';
+import AppDownloadBadge from '../components/AppDownloadBadge.jsx';
 
 /**
  * 운영 현황 페이지 (/live).
@@ -92,6 +93,7 @@ export default function LivePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <AppDownloadBadge />
             <button
               onClick={reload}
               disabled={loading}

@@ -5,6 +5,7 @@ import { labApi } from './api.js';
 import Builder from './Builder.jsx';
 import { useAuth } from '../hooks/useAuth.js';
 import StoreLinks from '../components/StoreLinks.jsx';
+import AppDownloadBadge from '../components/AppDownloadBadge.jsx';
 
 /**
  * Lab 메인 페이지 (Phase A 시작점, 자동매매 백테스트 빌더 진입점).
@@ -91,6 +92,7 @@ export default function LabPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <AppDownloadBadge />
             <Link
               to="/live"
               title="운영 현황 — PC 엔진 모니터링"

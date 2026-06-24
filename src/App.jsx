@@ -35,6 +35,7 @@ import IndicatorStudioTab from './tabs/IndicatorStudioTab';
 import StockEditorTab from './tabs/StockEditorTab';
 import CommunityTab from './tabs/CommunityTab';
 import StoreLinks from './components/StoreLinks.jsx';
+import AppDownloadBadge from './components/AppDownloadBadge.jsx';
 import { initAdMob, showBanner } from './utils/admob';
 
 const GOOGLE_WEB_CLIENT_ID = '874558352527-jpjfa7i23vrk9l30jq1od5vg93ko9g99.apps.googleusercontent.com';
@@ -531,21 +532,28 @@ export default function App() {
 
           <div className="flex flex-col sm:flex-row gap-4 font-sans text-left items-stretch sm:items-end w-full sm:w-auto">
             {appMode === 'community' ? (
-              <>{/* community 모드에서는 검색 UI 없음 */}</>
+              <div className="flex flex-col gap-1 text-left">
+                <label className="text-[10px] font-black text-violet-600 px-1 uppercase tracking-tighter">자동매매 Lab</label>
+                <Link
+                  to="/lab"
+                  className="flex items-center justify-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl p-2.5 w-full sm:w-auto font-bold text-xs uppercase tracking-tight transition-all shadow-lg shadow-violet-200"
+                >
+                  <Beaker size={14} />
+                  Lab 열기
+                </Link>
+              </div>
             ) : appMode === 'crypto' ? (
               <>
-                {activeTab !== 'studio' && (
-                  <div className="flex flex-col gap-1 text-left">
-                    <label className="text-[10px] font-black text-violet-600 px-1 uppercase tracking-tighter">자동매매 Lab</label>
-                    <Link
-                      to="/lab"
-                      className="flex items-center justify-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl p-2.5 w-full sm:w-auto font-bold text-xs uppercase tracking-tight transition-all shadow-lg shadow-violet-200"
-                    >
-                      <Beaker size={14} />
-                      Lab 열기
-                    </Link>
-                  </div>
-                )}
+                <div className="flex flex-col gap-1 text-left">
+                  <label className="text-[10px] font-black text-violet-600 px-1 uppercase tracking-tighter">자동매매 Lab</label>
+                  <Link
+                    to="/lab"
+                    className="flex items-center justify-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl p-2.5 w-full sm:w-auto font-bold text-xs uppercase tracking-tight transition-all shadow-lg shadow-violet-200"
+                  >
+                    <Beaker size={14} />
+                    Lab 열기
+                  </Link>
+                </div>
                 <div className="relative" ref={coinSearchRef}>
                   <div className="flex flex-col gap-1 text-left">
                     <label className="text-[10px] font-black text-blue-500 px-1 uppercase tracking-tighter">Compare: {altName}</label>
@@ -636,6 +644,7 @@ export default function App() {
                       <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center"><User size={16} className="text-indigo-500" /></div>
                     )}
                     <NicknameEditor userInfo={userInfo} onSave={updateNickname} />
+                    <AppDownloadBadge />
                   </div>
                 ) : isInAppBrowser ? (
                   <div className="w-full flex justify-center sm:justify-end">

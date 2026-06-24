@@ -241,7 +241,7 @@ function CommentSection({ postId, userInfo, fetchComments, createComment, update
 }
 
 // ── 자유게시판 카드 ──
-function FreePostCard({ post, userInfo, onUpdate, onDelete, commentActions, onIncrementViews }) {
+function FreePostCard({ post, userInfo, onUpdate, onDelete, commentActions, onIncrementViews, isNotice }) {
   const [expanded, setExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(post.title);
@@ -299,11 +299,25 @@ function FreePostCard({ post, userInfo, onUpdate, onDelete, commentActions, onIn
     );
   }
 
+  // 공지(관리자 최신 글) 카드는 자유게시판 상단에 별도로 고정 노출됨.
+  // 본문 리스트의 동일 글과 expanded 상태는 별개로 관리되므로 둘 다 자유롭게 펼치고 닫을 수 있다.
+  const wrapperCls = isNotice
+    ? `p-5 border-2 rounded-2xl transition-all ${expanded ? 'border-amber-500 bg-amber-100/40 shadow-md' : 'border-amber-300 bg-amber-50 hover:border-amber-400'}`
+    : `p-5 border-2 rounded-2xl transition-all ${expanded ? 'border-indigo-400 bg-indigo-50/30 shadow-md' : 'border-slate-100 bg-white hover:border-indigo-300'}`;
+  const titleCls = isNotice
+    ? 'text-base font-black text-orange-600 mb-2 leading-tight'
+    : 'text-base font-black text-slate-900 mb-2 leading-tight';
+
   return (
-    <article className={`p-5 border-2 rounded-2xl transition-all ${expanded ? 'border-indigo-400 bg-indigo-50/30 shadow-md' : 'border-slate-100 bg-white hover:border-indigo-300'}`}>
+    <article className={wrapperCls}>
       <div onClick={handleExpand} className="cursor-pointer">
         <div className="flex items-center justify-between mb-3 gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
+            {isNotice && (
+              <span className="text-[10px] font-black text-white bg-orange-500 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                공지
+              </span>
+            )}
             <div className="text-xs font-black text-slate-600 truncate">{renderNickname(post.nickname)}</div>
             <span className="text-[10px] font-bold text-slate-400 tabular-nums shrink-0">{timeAgo(post.createdAt)}</span>
           </div>
@@ -314,7 +328,14 @@ function FreePostCard({ post, userInfo, onUpdate, onDelete, commentActions, onIn
             {expanded ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
           </div>
         </div>
-        <h4 className="text-base font-black text-slate-900 mb-2 leading-tight">{post.title}</h4>
+        <h4 className={titleCls}>
+          {post.title}
+          {post.commentCount > 0 && (
+            <span className={`ml-1.5 font-bold tabular-nums ${isNotice ? 'text-orange-500' : 'text-indigo-500'}`}>
+              ({post.commentCount})
+            </span>
+          )}
+        </h4>
         <p className={`text-sm text-slate-600 font-medium leading-relaxed whitespace-pre-line ${expanded ? '' : 'line-clamp-2'}`}>{post.content}</p>
         {!expanded && <p className="text-[10px] font-bold text-indigo-500 mt-2 flex items-center gap-1"><MessageSquare size={12}/> 펼쳐서 댓글 보기 →</p>}
       </div>
@@ -759,6 +780,13 @@ export default function CommunityTab({ isLoggedIn, userInfo, subTab, onSubTabCha
       });
   }, [posts, subTab]);
 
+  // 자유게시판 상단 공지: 관리자가 작성한 글 중 가장 최근 1개.
+  // posts는 백엔드에서 최신순으로 내려오므로 filter 후 첫 항목.
+  const noticePost = useMemo(() => {
+    if (subTab !== 'board') return null;
+    return posts.find(p => p.nickname === '관리자') || null;
+  }, [posts, subTab]);
+
   // 자유게시판: 검색 및 페이지네이션
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -852,6 +880,19 @@ export default function CommunityTab({ isLoggedIn, userInfo, subTab, onSubTabCha
             )}
           </div>
         </div>
+      )}
+
+      {/* 공지: 관리자가 작성한 최신 글을 상단에 고정 노출 (본문 리스트에도 동일 글 그대로 표시) */}
+      {subTab === 'board' && noticePost && (
+        <FreePostCard
+          post={noticePost}
+          userInfo={userInfo}
+          onUpdate={handleUpdatePost}
+          onDelete={handleDeletePost}
+          onIncrementViews={incrementViews}
+          commentActions={commentActions}
+          isNotice
+        />
       )}
 
       {/* 작성 영역 (자유게시판) */}

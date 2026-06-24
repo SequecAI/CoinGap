@@ -301,7 +301,23 @@ def handle_list_posts(params):
                             item["profileImage"] = user_info.get("profileImage")
             except Exception as e:
                 print("Error joining user info for posts:", e)
-    
+
+        # 각 게시글의 댓글 수 카운트 (COUNT만 받아 페이로드 가벼움).
+        # board 외 타입에도 동일하게 적용 (앞으로 댓글 달리면 그대로 노출).
+        for item in items:
+            pid = item.get("postId")
+            if not pid:
+                item["commentCount"] = 0
+                continue
+            try:
+                c_res = community_table.query(
+                    KeyConditionExpression=boto3.dynamodb.conditions.Key("PK").eq(f"COMMENT#{pid}"),
+                    Select="COUNT",
+                )
+                item["commentCount"] = int(c_res.get("Count", 0))
+            except Exception:
+                item["commentCount"] = 0
+
     return _response(200, {"posts": items})
 
 
